@@ -1,0 +1,741 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SATS-PI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..700,0..100&family=Plus+Jakarta+Sans:wght@400..800&display=swap" rel="stylesheet">
+<style>
+  /* La page elle-même est l'application : même langage que le modèle (crème, bandeau noir qui se fond en or,
+     titres serif, boutons noirs arrondis), mais pensée pour l'ordinateur d'abord, puis le mobile.
+     Or = PI-SPI (mesuré sur ses logos). Orange = Bitcoin. Violet = Lightning (convention, non officiel). */
+  :root {
+    --cream: #F5F3E6;  --greige: #DDDBCB;
+    --ink: #17130B;    --mid: #6F6A58;     --line: rgba(23, 19, 11, .10);
+    --gold: #FBB900;   --gold-soft: #F6D675;
+    --ln: #792EE5;     --btc: #F7931A;
+    --ok: #1F7A3A;     --bad: #B3261E;
+    --serif: "Fraunces", Georgia, "Times New Roman", serif;
+    --sans: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--cream); color: var(--ink); font: 400 16px/1.5 var(--sans); }
+  button, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+  .hero-w :focus-visible, .khero :focus-visible { outline-color: #fff; }
+
+  /* ---------- barre de démonstration ---------- */
+  .demobar { position: sticky; top: 0; z-index: 20; background: rgba(245, 243, 230, .94); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+  .demobar .in { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; max-width: 1240px; margin: 0 auto; padding: 10px 16px; }
+  .demobar .lab { font-size: 13px; color: var(--mid); }
+  .seg { display: flex; padding: 4px; border-radius: 999px; background: rgba(23,19,11,.08); }
+  .seg button { padding: 8px 16px; border: 0; border-radius: 999px; background: transparent; font-weight: 700; font-size: 14px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+  .seg .dotbadge { display: inline-block; width: 8px; height: 8px; margin-left: 6px; border-radius: 50%; background: var(--btc); }
+  .jump { padding: 9px 14px; border: 1.5px solid var(--line); border-radius: 999px; background: #fff; font-size: 14px; font-weight: 600; }
+  .demo-btn { padding: 9px 18px; border: 2px dashed #6f6a58; border-radius: 999px; background: transparent; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .demo-btn:hover { background: rgba(255,255,255,.6); }
+  .sp { flex: 1; }
+
+  .bridge { display: grid; grid-template-columns: repeat(5, 1fr); max-width: 760px; margin: 0 auto; padding: 4px 16px 10px; list-style: none; }
+  .bridge li { position: relative; padding-top: 24px; text-align: center; font-size: 12.5px; color: var(--mid); --c: var(--ink); --cn: var(--ln); }
+  .bridge li:nth-child(1) { --c: var(--ink); --cn: var(--ln); }
+  .bridge li:nth-child(2) { --c: var(--ln);  --cn: var(--btc); }
+  .bridge li:nth-child(3) { --c: var(--btc); --cn: var(--gold); }
+  .bridge li:nth-child(4) { --c: var(--gold); --cn: var(--ink); }
+  .bridge li:nth-child(5) { --c: var(--ink); }
+  .bridge .dot { position: absolute; top: 0; left: 50%; z-index: 1; width: 16px; height: 16px; margin-left: -8px; border: 3px solid rgba(23,19,11,.18); border-radius: 50%; background: var(--cream); transition: background .4s, border-color .4s; }
+  .bridge li:not(:last-child)::before, .bridge li:not(:last-child)::after { content: ""; position: absolute; top: 6px; left: calc(50% + 10px); width: calc(100% - 20px); height: 4px; border-radius: 2px; }
+  .bridge li:not(:last-child)::before { background: rgba(23,19,11,.14); }
+  .bridge li:not(:last-child)::after { background: linear-gradient(90deg, var(--c), var(--cn)); transform: scaleX(0); transform-origin: left; transition: transform .7s ease; }
+  .bridge li.done:not(:last-child)::after { transform: scaleX(1); }
+  .bridge li.done .dot { background: var(--c); border-color: var(--c); }
+  .bridge li.active .dot { border-color: var(--c); box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 25%, transparent); }
+  .bridge li.active, .bridge li.done { color: var(--ink); }
+  .bridge li.active { font-weight: 700; }
+  .bridge li.fail .dot { border: 3px dashed var(--bad); }
+  .bridge li.fail { color: var(--bad); font-weight: 700; }
+
+  /* ---------- éléments communs ---------- */
+  .shell { max-width: 1240px; margin: 0 auto; padding: 12px 16px 56px; }
+  .logo { display: inline-flex; align-items: center; gap: 10px; font: 600 22px/1 var(--serif); letter-spacing: -.01em; }
+  .logo .tile { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; background: var(--ink); }
+  .logo .tile svg { width: 17px; height: 17px; }
+  .hero-w .logo .tile, .khero .logo .tile { background: rgba(255,255,255,.14); }
+  .roundbtn { display: grid; place-items: center; width: 42px; height: 42px; border: 0; border-radius: 50%; background: rgba(255,255,255,.7); cursor: pointer; }
+  .hero-w .roundbtn { background: rgba(255,255,255,.14); }
+  .roundbtn svg { width: 20px; height: 20px; }
+  .av { display: grid; place-items: center; flex: none; width: 42px; height: 42px; border-radius: 50%; background: var(--gold); color: var(--ink); font: 600 18px/1 var(--serif); }
+
+  h1.hello, h2.q { margin: 0; font: 500 30px/1.1 var(--serif); letter-spacing: -.015em; font-variation-settings: "SOFT" 40, "opsz" 72; }
+  h1.hello { font-size: 44px; }
+  h3.sec { margin: 0 0 12px; font: 500 26px/1.1 var(--serif); letter-spacing: -.01em; }
+  .sub { margin: 6px 0 0; color: var(--mid); }
+  .hero-w .sub, .khero .sub { color: rgba(255,255,255,.84); }
+  .sub.bad { color: var(--bad); font-weight: 600; }
+  .sub strong { color: var(--ink); }
+
+  .amt { display: flex; align-items: baseline; gap: 10px; font-family: var(--serif); font-weight: 500; letter-spacing: -.03em; line-height: 1; font-variation-settings: "SOFT" 30, "opsz" 144; }
+  .amt .n { font-size: 74px; font-variant-numeric: lining-nums tabular-nums; }
+  .amt .n.empty { color: rgba(23,19,11,.2); }
+  .amt .u { font-size: 32px; color: var(--mid); }
+  .amt.m .n { font-size: 60px; } .amt.s .n { font-size: 48px; }
+  .amt.big .n { font-size: 104px; } .amt.big .u { font-size: 40px; }
+  .hero-w .amt .u, .khero .amt .u { color: rgba(255,255,255,.6); }
+
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 12px; padding: 18px; border: 0; border-radius: 999px; background: var(--ink); color: #fff; font-weight: 700; font-size: 17px; cursor: pointer; box-shadow: 0 10px 20px -12px rgba(23,19,11,.7); }
+  .btn:hover { background: #2b2415; }
+  .btn:disabled { background: rgba(23,19,11,.16); color: rgba(23,19,11,.4); box-shadow: none; cursor: not-allowed; }
+  .btn.ln { background: var(--ln); box-shadow: 0 10px 20px -12px rgba(121,46,229,.8); } .btn.ln:hover { background: #6a22d1; }
+  .btn.ghost { background: rgba(255,255,255,.6); color: var(--ink); border: 1.5px solid var(--line); box-shadow: none; } .btn.ghost:hover { background: #fff; }
+  .btn.gold { background: var(--gold); color: var(--ink); box-shadow: none; } .btn.gold:hover { background: #ffc61f; }
+  .btn.frost { background: rgba(255,255,255,.14); color: #fff; box-shadow: none; } .btn.frost:hover { background: rgba(255,255,255,.24); }
+  .btn.inline { width: auto; margin-top: 0; padding: 16px 26px; }
+  .btn svg { width: 20px; height: 20px; }
+
+  .panel { padding: 24px 26px; border-radius: 32px; background: rgba(255,255,255,.74); border: 1px solid rgba(255,255,255,.9); box-shadow: 0 24px 50px -34px rgba(70,55,8,.6); }
+  .row { display: flex; align-items: center; gap: 14px; padding: 14px 0; }
+  .row + .row { border-top: 1px solid var(--line); }
+  .row .t { flex: 1; min-width: 0; } .row .t b { display: block; font-weight: 700; } .row .t span { color: var(--mid); font-size: 14px; }
+  .row .m { font-weight: 800; font-variant-numeric: tabular-nums; }
+
+  /* ---------- tableau de bord d'Afi ---------- */
+  .hero-w { color: #fff; border-radius: 40px 40px 0 0; padding: 22px 36px 230px;
+            background: linear-gradient(180deg, #17130B 0, #17130B calc(100% - 330px), #6e520c calc(100% - 250px), #E7BC3C calc(100% - 150px), #F6E7B0 calc(100% - 60px), var(--cream) 100%); }
+  .nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .ptabs { display: flex; gap: 8px; }
+  .ptabs button { padding: 10px 20px; border: 0; border-radius: 999px; background: rgba(255,255,255,.14); color: #fff; font-weight: 600; font-size: 15px; cursor: pointer; }
+  .ptabs button.on { background: var(--gold); color: var(--ink); }
+  .navr { display: flex; align-items: center; gap: 12px; }
+  .hero-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 40px; align-items: center; margin-top: 34px; }
+  .hello-row { display: flex; align-items: center; gap: 14px; }
+  .lbl { margin: 26px 0 8px; color: rgba(255,255,255,.84); }
+  .cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+
+  .gcard { position: relative; width: 100%; max-width: 430px; justify-self: end; padding: 22px 24px; aspect-ratio: 1.62; border-radius: 28px; overflow: hidden; color: var(--ink);
+           background: linear-gradient(140deg, #F9E39A 0%, #EDC24A 42%, #B98A10 100%); box-shadow: 0 30px 50px -26px rgba(0,0,0,.7); display: flex; flex-direction: column; text-align: left; border: 0; font: inherit; }
+  .gcard::after { content: ""; position: absolute; inset: 0; background: radial-gradient(80% 60% at 20% 0%, rgba(255,255,255,.55), transparent 70%); pointer-events: none; }
+  button.gcard { cursor: pointer; }
+  .gcard.sm { aspect-ratio: auto; padding: 16px 20px; margin-top: 14px; max-width: none; }
+  .gc-top { display: flex; justify-content: space-between; align-items: center; }
+  .chipic { width: 42px; height: 31px; border-radius: 8px; background: linear-gradient(135deg, rgba(255,255,255,.55), rgba(120,85,5,.25)); border: 1px solid rgba(90,62,0,.35); }
+  .gc-mark { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px; background: var(--ink); }
+  .gc-mark svg { width: 19px; height: 19px; }
+  .gc-lbl { margin: auto 0 0; font-weight: 600; font-size: 15px; color: rgba(23,19,11,.7); }
+  .gc-amt { margin: 2px 0 0; font: 500 52px/1 var(--serif); letter-spacing: -.03em; font-variation-settings: "SOFT" 30, "opsz" 144; }
+  .gc-amt small { font-size: 26px; margin-left: 4px; }
+  .gc-foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 12px; font-size: 14px; font-weight: 600; color: rgba(23,19,11,.78); }
+
+  .cols { position: relative; display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; margin: -190px 24px 0; }
+  .cols .panel { background: rgba(255,255,255,.94); }
+  .stats { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .stat { display: flex; align-items: center; gap: 14px; padding: 18px 22px; border-radius: 28px; background: rgba(255,255,255,.94); box-shadow: 0 24px 50px -34px rgba(70,55,8,.6); }
+  .stat .ic { display: grid; place-items: center; flex: none; width: 46px; height: 46px; border-radius: 15px; background: var(--ink); color: var(--gold); }
+  .stat .ic.o { background: var(--btc); color: var(--ink); } .stat .ic.g { background: var(--gold); color: var(--ink); }
+  .stat .ic svg { width: 22px; height: 22px; }
+  .stat b { display: block; font: 500 28px/1.05 var(--serif); letter-spacing: -.02em; font-variant-numeric: lining-nums tabular-nums; }
+  .stat span { color: var(--mid); font-size: 14px; }
+  .quick { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1.2fr; gap: 28px; align-items: center; }
+  .qbtns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+  .qbtns button { padding: 16px 4px; border: 1.5px solid var(--line); border-radius: 22px; background: #fff; font: 500 22px/1 var(--serif); cursor: pointer; transition: transform .15s, background .15s; }
+  .qbtns button small { display: block; margin-top: 4px; font: 600 12px/1 var(--sans); color: var(--mid); }
+  .qbtns button:hover { background: var(--gold-soft); border-color: transparent; transform: translateY(-2px); }
+  .how3 { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; counter-reset: h; }
+  .how3 li { display: flex; align-items: center; gap: 12px; counter-increment: h; }
+  .how3 li::before { content: counter(h); display: grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: var(--gold); font-weight: 800; font-size: 14px; }
+  .how3 b { font-weight: 700; } .how3 span { color: var(--mid); }
+  .panel.chart-p h3.sec { margin-bottom: 4px; }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .chart .days { display: flex; justify-content: space-between; margin-top: 8px; padding: 0 6px; color: var(--mid); font-size: 13px; }
+  .chart .days .on { padding: 3px 10px; border-radius: 9px; background: var(--ink); color: #fff; font-weight: 700; }
+  .av-sm { width: 44px; height: 44px; }
+
+  /* ---------- tiroir : créer une demande ---------- */
+  .scrim { position: fixed; inset: 0; z-index: 30; background: rgba(23,19,11,.5); }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; z-index: 31; width: min(500px, 100%); display: flex; flex-direction: column; overflow-y: auto; border-radius: 36px 0 0 36px;
+            background: radial-gradient(120% 28% at 50% 0%, rgba(246,205,80,.45), transparent 72%), var(--cream);
+            box-shadow: -30px 0 60px -30px rgba(0,0,0,.5); animation: slide .35s cubic-bezier(.2,.8,.2,1); }
+  .drawer:focus { outline: none; }
+  @keyframes slide { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .dh { display: flex; align-items: center; justify-content: space-between; padding: 22px 28px 8px; }
+  .dh .t { font: 600 20px/1 var(--serif); }
+  .db { display: flex; flex-direction: column; flex: 1; padding: 8px 28px 28px; }
+  .grow { flex: 1; }
+
+  .chips { display: flex; gap: 6px; margin-top: 16px; }
+  .chip { flex: 1; padding: 11px 2px; border: 1.5px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.55); font-weight: 700; font-size: 14px; cursor: pointer; white-space: nowrap; }
+  .chip:hover { background: var(--gold-soft); border-color: transparent; }
+  .keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 18px; }
+  .key { height: 56px; border: 0; border-radius: 18px; background: rgba(255,255,255,.75); font: 600 24px/1 var(--serif); cursor: pointer; box-shadow: 0 1px 0 var(--line); }
+  .key:active { background: var(--gold-soft); }
+  .key svg { width: 24px; height: 24px; }
+  .fld { margin-top: 18px; }
+  .fld label { display: block; margin-bottom: 6px; font-weight: 700; font-size: 15px; }
+  .fld input { width: 100%; height: 58px; padding: 0 18px; border: 1.5px solid var(--line); border-radius: 20px; background: rgba(255,255,255,.8); color: var(--ink); font: 600 18px/1 var(--sans); }
+  .fld input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 4px rgba(251,185,0,.35); }
+  .pfx { display: flex; align-items: center; gap: 8px; }
+  .pfx .code { flex: none; display: grid; place-items: center; height: 58px; padding: 0 16px; border-radius: 20px; background: rgba(255,255,255,.8); border: 1.5px solid var(--line); font-weight: 700; font-size: 18px; }
+  .pfx .tick { flex: none; width: 28px; height: 28px; border-radius: 50%; background: rgba(23,19,11,.14); display: grid; place-items: center; }
+  .pfx .tick svg { width: 16px; height: 16px; stroke: #fff; }
+  .pfx .tick.ok { background: var(--ok); }
+  .hint { margin: 6px 4px 0; color: var(--mid); font-size: 14px; }
+  .hint.bad { color: var(--bad); font-weight: 600; }
+  .linkrow { margin-top: 14px; padding: 13px 16px; border: 1.5px dashed rgba(23,19,11,.35); border-radius: 18px; background: rgba(255,255,255,.5); font-weight: 600; font-size: 15px; word-break: break-all; }
+  .waiting { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-weight: 700; }
+  .pulse { flex: none; width: 12px; height: 12px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 2px var(--ink); animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { transform: scale(1.5); opacity: .4; } }
+  .big-check { display: grid; place-items: center; width: 76px; height: 76px; margin: 6px 0 14px; border-radius: 50%; background: var(--gold); animation: pop .5s cubic-bezier(.2,.9,.3,1.3); }
+  .big-check svg { width: 40px; height: 40px; stroke: var(--ink); }
+  @keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+  .card { margin-top: 14px; padding: 16px 18px; border-radius: 24px; background: rgba(255,255,255,.7); border: 1px solid rgba(255,255,255,.9); }
+  .steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 16px; }
+  .steps li { display: flex; align-items: center; gap: 12px; color: var(--mid); font-size: 17px; }
+  .steps .d { position: relative; flex: none; width: 26px; height: 26px; border: 3px solid rgba(23,19,11,.15); border-radius: 50%; }
+  .steps li.active { color: var(--ink); font-weight: 700; }
+  .steps li.active .d { border-color: var(--ink); border-top-color: transparent; animation: spin 1s linear infinite; }
+  .steps li.done { color: var(--ink); }
+  .steps li.done .d { background: var(--ink); border-color: var(--ink); }
+  .steps li.done .d::after { content: ""; position: absolute; left: 7px; top: 2px; width: 6px; height: 12px; border: solid #fff; border-width: 0 3px 3px 0; transform: rotate(45deg); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .sms { margin: 14px 0 0; padding: 13px 16px; border-radius: 22px 22px 22px 6px; background: var(--ink); color: #fff; animation: pop .45s cubic-bezier(.2,.9,.3,1.2); }
+  .sms-t { margin: 4px 8px 0; color: var(--mid); font-size: 12px; }
+
+  /* ---------- page de Koffi ---------- */
+  .knav { display: flex; align-items: center; justify-content: space-between; padding: 12px 8px 20px; }
+  .who { color: var(--mid); }
+  .kgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: stretch; }
+  .khero { color: #fff; border-radius: 40px 40px 0 0; padding: 40px 40px 200px; min-height: 620px;
+           background: linear-gradient(180deg, #17130B 0, #17130B calc(100% - 270px), #6e520c calc(100% - 170px), #E7BC3C calc(100% - 64px), #F3DC8B 100%); }
+  .khero h1 { margin: 0; font: 500 38px/1.08 var(--serif); letter-spacing: -.015em; font-variation-settings: "SOFT" 40, "opsz" 72; }
+  .khero .amt { margin-top: 12px; } .khero .amt .n { font-size: 96px; }
+  .how { margin: 28px 0 0; padding: 0; list-style: none; display: grid; gap: 12px; counter-reset: s; }
+  .how li { display: flex; align-items: center; gap: 12px; counter-increment: s; color: rgba(255,255,255,.9); }
+  .how li::before { content: counter(s); display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--gold); color: var(--ink); font-weight: 800; font-size: 14px; }
+  .kpay { align-self: center; }
+  .paybox { padding: 26px; border-radius: 32px; background: #fff; text-align: center; box-shadow: 0 30px 60px -34px rgba(23,19,11,.6); }
+  .paybox .qr svg { display: block; width: 210px; height: 210px; margin: 0 auto; }
+  .qrnote { margin: 6px 0 0; color: var(--mid); font-size: 13px; }
+  .sats-line { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: 4px 12px; margin-top: 14px; }
+  .sats-line b { font: 500 46px/1 var(--serif); letter-spacing: -.02em; font-variant-numeric: lining-nums tabular-nums; }
+  .badge { padding: 4px 12px; border-radius: 999px; background: var(--btc); color: var(--ink); font-weight: 800; font-size: 15px; }
+  .eur { color: var(--mid); font-weight: 600; font-size: 18px; }
+  .timer { margin: 14px 0 0; text-align: center; color: var(--mid); font-size: 14px; font-variant-numeric: tabular-nums; }
+  details { margin-top: 16px; } summary { cursor: pointer; font-weight: 700; }
+  details table { width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 14px; }
+  details td { padding: 4px 0; } details td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+  details tr.t td { padding-top: 7px; border-top: 1px solid var(--line); font-weight: 700; }
+  .help { margin: 14px 0 0; color: var(--mid); font-size: 14px; text-align: center; }
+  .inbox { max-width: 560px; margin: 40px auto; }
+  .msg { max-width: 92%; margin-top: 16px; padding: 14px 18px; border-radius: 24px 24px 24px 6px; background: #fff; box-shadow: 0 14px 30px -22px rgba(70,55,8,.6); animation: pop .45s cubic-bezier(.2,.9,.3,1.2); }
+  .msg .from { margin: 0 0 4px; font-weight: 700; font-size: 14px; color: var(--mid); }
+  .msg p { margin: 0; }
+  .empty { margin: 36px 0; text-align: center; color: var(--mid); }
+  .toast { position: fixed; left: 50%; bottom: 24px; z-index: 40; transform: translateX(-50%); padding: 12px 20px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 14px; box-shadow: 0 12px 30px -12px rgba(0,0,0,.6); }
+
+  /* ---------- mobile ---------- */
+  @media (max-width: 899px) {
+    .demobar .in { gap: 8px 10px; } .demobar .lab { display: none; } .sp { display: none; }
+    .jump { flex: 1; min-width: 0; }
+    .bridge li { font-size: 11.5px; }
+    .shell { padding: 8px 10px 40px; }
+    .hero-w { border-radius: 32px; padding: 16px 20px 190px; }
+    .nav { flex-wrap: wrap; } .nav .ptabs { order: 3; width: 100%; }
+    .hero-grid { grid-template-columns: 1fr; gap: 20px; margin-top: 20px; }
+    h1.hello { font-size: 32px; }
+    .amt.big .n { font-size: 68px; } .amt.big .u { font-size: 30px; }
+    .lbl { margin-top: 18px; }
+    .gcard { justify-self: stretch; max-width: none; }
+    .cols { grid-template-columns: 1fr; margin: -160px 8px 0; } .stats { grid-template-columns: 1fr; gap: 12px; } .quick { grid-template-columns: 1fr; } .qbtns { grid-template-columns: repeat(2, 1fr); } .hero-w { padding-bottom: 200px; }
+    .panel { padding: 20px 18px; border-radius: 28px; }
+    .drawer { width: 100%; border-radius: 0; }
+    .kgrid { grid-template-columns: 1fr; }
+    .khero { padding: 28px 24px 190px; min-height: 0; border-radius: 32px; }
+    .khero h1 { font-size: 30px; } .khero .amt .n { font-size: 68px; }
+    .kpay { margin-top: -150px; position: relative; padding: 0 8px; }
+    .paybox { padding: 20px; } .paybox .qr svg { width: 170px; height: 170px; }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="demobar">
+  <div class="in">
+    <span class="lab">Démonstration, tout est simulé :</span>
+    <div class="seg" role="group" aria-label="Choisir la vue">
+      <button id="v-a" aria-pressed="true" data-view="a">Afi, à Cotonou</button>
+      <button id="v-b" aria-pressed="false" data-view="b">Koffi, à Paris<span class="dotbadge" id="badge-b" hidden></span></button>
+    </div>
+    <label class="sp" for="jump" style="position:absolute;left:-9999px">Aller à l'étape</label>
+    <select class="jump" id="jump" aria-label="Aller à l'étape">
+      <option value="home">Étape : Accueil</option>
+      <option value="hist">Historique</option>
+      <option value="a1">Montant</option>
+      <option value="a2">Numéro</option>
+      <option value="ready">Demande prête</option>
+      <option value="shared">Lien reçu</option>
+      <option value="opened">Paiement</option>
+      <option value="processing">Envoi</option>
+      <option value="done">Reçu</option>
+      <option value="failed">Échec d'envoi</option>
+      <option value="expired">Expiré</option>
+    </select>
+    <span id="demo-slot"></span>
+  </div>
+  <ol class="bridge" id="bridge" aria-label="Avancement du paiement">
+    <li><span class="dot"></span>Demande</li>
+    <li><span class="dot"></span>Lightning</li>
+    <li><span class="dot"></span>Conversion</li>
+    <li><span class="dot"></span>PI-SPI</li>
+    <li><span class="dot"></span>Reçu</li>
+  </ol>
+</div>
+
+<main id="app" aria-live="polite"></main>
+<div id="layer"></div>
+
+<script>
+/* Démo autonome : tout est simulé dans le navigateur.
+   Branchement sur le backend FastAPI du projet :
+   - quote()                -> GET  /api/quote?amount_xof=...
+   - création de la demande -> POST /api/links
+   - suivi du statut        -> GET  /api/links/{id} toutes les 1,5 s
+   - bouton WhatsApp        -> window.open("https://wa.me/?text=" + encodeURIComponent(message))
+   - QR                     -> GET  /api/links/{id}/qr.svg                     */
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const fmt = (n) => new Intl.NumberFormat("fr-FR").format(n);
+const EUR_PEG = 655.957;
+const eur = (xof) => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(xof / EUR_PEG);
+
+const RATE = 60_000_000, SERVICE_PCT = 1.0, PISPI_PCT = 0.8, MIN = 500, MAX = 100_000, TTL = 15 * 60;
+const ceil = (x) => Math.ceil(Math.round(x * 1e6) / 1e6);
+function quote(a) {
+  const s = ceil(a * SERVICE_PCT / 100), p = ceil(a * PISPI_PCT / 100), t = a + s + p;
+  return { a, s, p, t, sats: ceil(t / RATE * 1e8) };
+}
+
+const sv = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const I = {
+  bolt: (c = "currentColor") => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6z" fill="${c}"/></svg>`,
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+  bell: sv('<path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15zM10 21h4"/>'),
+  plus: sv('<path d="M12 5v14M5 12h14"/>'),
+  close: sv('<path d="M6 6l12 12M18 6 6 18"/>'),
+  del: sv('<path d="M20 12H8m0 0 5-5m-5 5 5 5M4 5v14"/>'),
+};
+
+const FLOW = ["a1", "a2", "ready", "shared", "opened", "processing", "done", "failed", "expired"];
+const BASE_BALANCE = 187500;
+const S = { view: "a", step: "home", drawer: false, amount: "", name: "Afi", phone: "", link: null, phase: 0, credited: false,
+  history: [
+    { who: "Koffi, à Paris", when: "Il y a 2 jours", amt: 20000 },
+    { who: "Mireille, à Lyon", when: "Il y a 5 jours", amt: 10000 },
+    { who: "Koffi, à Paris", when: "Il y a 12 jours", amt: 50000 },
+  ] };
+let tick = null, timers = [], toastT = null;
+
+const digits = (x) => (x || "").replace(/\D/g, "");
+function normalizePhone(raw) {
+  let d = digits(raw);
+  if (d.startsWith("229")) d = d.slice(3);
+  if (d.length === 8) d = "01" + d;
+  return d.length === 10 && d.startsWith("01") ? d : null;
+}
+const mask = (d) => `+229 ${d.slice(0, 2)} ${d.slice(2, 4)} ** ** ${d.slice(-2)}`.replace(/ /g, " ");
+const amountNum = () => +S.amount || 0;
+const amountOk = () => amountNum() >= MIN && amountNum() <= MAX;
+const balance = () => BASE_BALANCE + S.history.filter((h) => h.new).reduce((s, h) => s + h.amt, 0);
+const nm = () => S.name || "Afi";
+const L = () => S.link;
+
+function makeLink() {
+  const q = quote(amountNum());
+  const id = Array.from(crypto.getRandomValues(new Uint8Array(4)), (b) => b.toString(16).padStart(2, "0")).join("");
+  S.link = { id, ...q, phone: normalizePhone(S.phone), url: `sats-pi.app/l/${id}`, ref: "MOCK-" + id.toUpperCase(),
+    invoice: `lnbc${q.sats}n1mock${id}${"q".repeat(36)}`, expires: Date.now() + TTL * 1000 };
+  S.credited = false;
+}
+
+function qrSvg(seed) {
+  const N = 29; let h = 2166136261;
+  for (const c of seed) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0;
+  const rnd = () => { h ^= h << 13; h >>>= 0; h ^= h >>> 17; h ^= h << 5; h >>>= 0; return h / 4294967296; };
+  const fin = (x, y) => (x < 8 && y < 8) || (x >= N - 8 && y < 8) || (x < 8 && y >= N - 8);
+  const box = (ox, oy) => `M${ox} ${oy}h7v7h-7zM${ox + 1} ${oy + 1}h5v5h-5zM${ox + 2} ${oy + 2}h3v3h-3z`;
+  let d = box(0, 0) + box(N - 7, 0) + box(0, N - 7);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (!fin(x, y) && rnd() > 0.52) d += `M${x} ${y}h1v1h-1z`;
+  return `<svg viewBox="-2 -2 ${N + 4} ${N + 4}" shape-rendering="crispEdges" role="img" aria-label="QR de la facture Lightning (exemple)"><rect x="-2" y="-2" width="${N + 4}" height="${N + 4}" fill="#fff"/><path d="${d}" fill="#17130B" fill-rule="evenodd"/></svg>`;
+}
+
+function chartSvg() {
+  const vals = [12, 18, 9, 22, 31, 14, 20], days = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"], pk = 4;
+  const W = 640, H = 210, px = (i) => 18 + i * ((W - 36) / (vals.length - 1)), py = (v) => H - 20 - (v / 34) * (H - 56);
+  const P = vals.map((v, i) => [px(i), py(v)]);
+  let d = `M${P[0][0]} ${P[0][1]}`;
+  for (let i = 0; i < P.length - 1; i++) {
+    const [x0, y0] = P[Math.max(i - 1, 0)], [x1, y1] = P[i], [x2, y2] = P[i + 1], [x3, y3] = P[Math.min(i + 2, P.length - 1)];
+    d += ` C${x1 + (x2 - x0) / 6} ${y1 + (y2 - y0) / 6} ${x2 - (x3 - x1) / 6} ${y2 - (y3 - y1) / 6} ${x2} ${y2}`;
+  }
+  const [kx, ky] = P[pk];
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Montants reçus cette semaine (exemple)">
+    <defs><linearGradient id="glow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FBB900"/><stop offset="1" stop-color="#FBB900" stop-opacity="0"/></linearGradient></defs>
+    <rect x="${kx - 16}" y="${ky}" width="32" height="${H - ky - 10}" rx="16" fill="url(#glow)"/>
+    <path d="${d}" fill="none" stroke="#17130B" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="${kx}" cy="${ky}" r="8" fill="#fff" stroke="#17130B" stroke-width="3"/>
+    <g transform="translate(${kx - 42} ${ky - 44})"><rect width="84" height="30" rx="15" fill="#FBB900"/><text x="42" y="20.5" text-anchor="middle" font-size="15" font-weight="800" fill="#17130B" font-family="Plus Jakarta Sans, sans-serif">31 000 F</text></g>
+  </svg><div class="days">${days.map((x, i) => `<span class="${i === pk ? "on" : ""}">${x}</span>`).join("")}</div></div>`;
+}
+
+const logo = () => `<span class="logo"><span class="tile">${I.bolt("#FBB900")}</span>SATS-PI</span>`;
+const rows = (list) => list.map((h) => `<div class="row"><span class="av av-sm">${h.who[0]}</span><span class="t"><b>${h.who}</b><span>${h.when}</span></span><span class="m">+ ${fmt(h.amt)} F</span></div>`).join("");
+const gcard = (small) => `<div class="gcard ${small ? "sm" : ""}"><div class="gc-top"><span class="chipic"></span><span class="gc-mark">${I.bolt("#FBB900")}</span></div>
+  <p class="gc-lbl">Demande de paiement</p><p class="gc-amt">${fmt(L().a)}<small>F</small></p>
+  <div class="gc-foot"><span>${mask(L().phone)}</span><span>Valable 15 min</span></div></div>`;
+
+function stepsHtml() {
+  const list = ["Paiement Lightning reçu", "Conversion en FCFA", "Envoi PI-SPI vers le mobile money"];
+  const state = S.step === "done" ? [2, 2, 2] : S.phase === 0 ? [2, 1, 0] : [2, 2, 1];
+  return list.map((t, i) => `<li class="${state[i] === 2 ? "done" : state[i] === 1 ? "active" : ""}"><span class="d"></span>${t}</li>`).join("");
+}
+
+/* ============================ VUE D'AFI ============================ */
+function reqCard() {
+  const inFlow = S.link && FLOW.includes(S.step);
+  if (!inFlow) return `<button class="gcard" data-act="start" aria-label="Créer une nouvelle demande de paiement">
+    <div class="gc-top"><span class="chipic"></span><span class="gc-mark">${I.bolt("#FBB900")}</span></div>
+    <p class="gc-lbl">Nouvelle demande</p><p class="gc-amt" style="font-size:34px">Recevoir des FCFA</p>
+    <div class="gc-foot"><span>Depuis n'importe quel pays</span><span>Prête en 30 s</span></div></button>`;
+  const status = { a1: "", a2: "", ready: "Prête à envoyer", shared: "En attente du paiement", opened: "En attente du paiement", processing: "Paiement reçu, envoi en cours", done: "Argent reçu", failed: "Envoi à relancer", expired: "Expirée" }[S.step];
+  return `<button class="gcard" data-act="reopen" aria-label="Ouvrir la demande en cours"><div class="gc-top"><span class="chipic"></span><span class="gc-mark">${I.bolt("#FBB900")}</span></div>
+    <p class="gc-lbl">${status || "Demande en cours"}</p><p class="gc-amt">${fmt(L().a)}<small>F</small></p>
+    <div class="gc-foot"><span>${mask(L().phone)}</span><span>Voir le détail</span></div></button>`;
+}
+
+function afiHtml() {
+  const hist = S.step === "hist";
+  return `<div class="shell">
+  <section class="hero-w" aria-label="Résumé">
+    <nav class="nav" aria-label="Navigation">
+      ${logo()}
+      <div class="ptabs"><button class="${hist ? "" : "on"}" data-act="home" ${hist ? "" : 'aria-current="page"'}>Recevoir</button><button class="${hist ? "on" : ""}" data-act="hist" ${hist ? 'aria-current="page"' : ""}>Historique</button></div>
+      <div class="navr"><button class="roundbtn" data-act="notif" aria-label="Notifications">${I.bell}</button><span class="av" aria-hidden="true">${nm()[0]}</span></div>
+    </nav>
+    <div class="hero-grid">
+      <div>
+        <h1 class="hello">Bonjour, ${nm()}</h1>
+        <p class="lbl">Reçu ce mois-ci</p>
+        <div class="amt big"><span class="n">${fmt(balance())}</span><span class="u">F</span></div>
+        <p class="sub">+12 % par rapport au mois dernier</p>
+        <div class="cta-row">
+          <button class="btn gold inline" data-act="start">${I.plus}Demander de l'argent</button>
+          <button class="btn frost inline" data-act="hist">Voir l'historique</button>
+        </div>
+      </div>
+      ${reqCard()}
+    </div>
+  </section>
+  <section class="cols">
+    ${hist ? "" : `<div class="stats">
+      <div class="stat"><span class="ic g">${sv('<path d="M4 17 9 11l4 4 7-8M15 7h5v5"/>')}</span><div><b>31 000 F</b><span>Reçu cette semaine</span></div></div>
+      <div class="stat"><span class="ic">${sv('<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>')}</span><div><b>${S.link && ["ready","shared","opened","processing"].includes(S.step) ? "1" : "0"}</b><span>Demande en attente</span></div></div>
+      <div class="stat"><span class="ic o">${I.bolt("currentColor")}</span><div><b>≈ 1,8 %</b><span>Frais maximum (service + PI-SPI)</span></div></div></div>`}
+    ${hist ? `<div class="panel" style="grid-column:1/-1"><h3 class="sec">Argent reçu</h3>${rows(S.history)}</div>` : `
+    <div class="panel chart-p"><h3 class="sec">Argent reçu cette semaine</h3><p class="sub" style="margin:0 0 10px">Exemple de données</p>${chartSvg()}</div>
+    <div class="panel"><h3 class="sec">Dernières transactions</h3>${rows(S.history.slice(0, 4))}
+      <button class="btn ghost" data-act="hist" style="margin-top:8px">Voir tout l'historique</button></div>
+    <div class="panel quick">
+      <div><h3 class="sec">Demande rapide</h3><p class="sub" style="margin:0">Choisissez un montant, on s'occupe du reste.</p>
+        <div class="qbtns">${[5000,10000,20000,50000].map((v)=>`<button data-act="quick" data-v="${v}">${fmt(v)}<small>FCFA</small></button>`).join("")}</div></div>
+      <div><h3 class="sec">Comment ça marche</h3><ol class="how3"><li><span><b>Vous créez</b> une demande avec votre numéro.</span></li><li><span><b>Vous envoyez</b> le lien par WhatsApp.</span></li><li><span><b>Vous recevez</b> des FCFA sur votre mobile money.</span></li></ol></div>
+    </div>
+`}
+  </section>
+  </div>`;
+}
+
+function flowBody() {
+  const st = S.step;
+  if (st === "a1") return `
+    <h2 class="q">Combien voulez-vous recevoir ?</h2>
+    <div class="amt" id="a-amt" style="margin-top:14px"><span class="n" id="a-n"></span><span class="u">F</span></div>
+    <p class="sub" id="a-sub"></p>
+    <div class="chips" role="group" aria-label="Montants rapides">${[5000, 10000, 20000, 50000].map((v) => `<button class="chip" data-act="chip" data-v="${v}">${fmt(v)}</button>`).join("")}</div>
+    <div class="keys" role="group" aria-label="Clavier numérique">
+      ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((k) => `<button class="key" data-act="key" data-k="${k}">${k}</button>`).join("")}
+      <button class="key" data-act="key" data-k="000" aria-label="Trois zéros">000</button>
+      <button class="key" data-act="key" data-k="0">0</button>
+      <button class="key" data-act="del" aria-label="Effacer le dernier chiffre">${I.del}</button>
+    </div>
+    <div class="grow"></div>
+    <button class="btn" id="a-next" data-act="a-next" disabled>Continuer</button>`;
+
+  if (st === "a2") return `
+    <h2 class="q">Qui reçoit l'argent ?</h2>
+    <p class="sub">Vous recevrez <strong>${fmt(amountNum())} F</strong> sur ce numéro, en quelques secondes.</p>
+    <div class="fld"><label for="f-name">Votre prénom</label><input id="f-name" maxlength="20" value="${S.name.replace(/"/g, "&quot;")}" autocomplete="given-name"></div>
+    <div class="fld"><label for="f-phone">Votre numéro mobile money</label>
+      <div class="pfx"><span class="code" aria-hidden="true">+229</span>
+        <input id="f-phone" style="flex:1;min-width:0" inputmode="tel" placeholder="01 97 12 34 56" value="${S.phone}" aria-describedby="f-hint" autocomplete="tel-national">
+        <span class="tick" id="f-tick" aria-hidden="true">${I.check}</span></div>
+      <p class="hint" id="f-hint">Le prénom sera montré à la personne qui paie.</p></div>
+    <div class="grow"></div>
+    <button class="btn" id="a-create" data-act="a-create" disabled>Créer ma demande</button>
+    <button class="btn ghost" data-act="a-back">Modifier le montant</button>`;
+
+  if (st === "ready") return `
+    <h2 class="q">Votre demande est prête</h2>
+    <p class="sub">Envoyez-la à la personne qui vous envoie l'argent. Elle paie avec n'importe quel wallet Lightning.</p>
+    <div style="margin-top:14px">${gcard(false)}</div>
+    <div class="linkrow">${L().url}</div>
+    <div class="grow"></div>
+    <button class="btn" data-act="share">Envoyer par WhatsApp</button>
+    <button class="btn ghost" data-act="copy-link">Copier le lien</button>`;
+
+  if (st === "shared" || st === "opened") return `
+    <h2 class="q">En attente du paiement</h2>
+    <div class="waiting"><span class="pulse"></span>${st === "shared" ? "Le lien est parti. Koffi ne l'a pas encore ouvert." : "Koffi a ouvert le lien et prépare son paiement."}</div>
+    ${gcard(true)}
+    <div class="linkrow">${L().url}</div>
+    <div class="grow"></div>
+    <button class="btn ghost" data-act="copy-link">Copier le lien</button>`;
+
+  if (st === "processing") return `
+    <h2 class="q">Paiement reçu. L'argent arrive.</h2>
+    <div class="card" style="margin-top:18px"><ul class="steps">${stepsHtml()}</ul></div>
+    ${gcard(true)}`;
+
+  if (st === "done") return `
+    <div class="big-check">${I.check}</div>
+    <h2 class="q">Argent reçu !</h2>
+    <div class="amt" style="margin-top:10px"><span class="n">${fmt(L().a)}</span><span class="u">F</span></div>
+    <p class="sub">Disponible sur votre mobile money.</p>
+    <p class="sms">Vous avez reçu <b>${fmt(L().a)} FCFA</b> de SATS-PI. Référence ${L().ref}.</p>
+    <p class="sms-t">Message d'exemple, à l'instant</p>
+    <div class="grow"></div>
+    <button class="btn" data-act="finish">Retour au tableau de bord</button>`;
+
+  if (st === "failed") return `
+    <h2 class="q">Paiement reçu, envoi à relancer</h2>
+    <p class="sub">Koffi a bien payé. L'envoi vers votre mobile money a échoué. Notre équipe le relance : vous n'avez rien à refaire, et Koffi n'a rien à repayer.</p>
+    ${gcard(true)}
+    <div class="grow"></div>
+    <button class="btn ghost" data-act="finish">Retour au tableau de bord</button>`;
+
+  return `
+    <h2 class="q">La demande a expiré</h2>
+    <p class="sub">Le prix en bitcoin n'était plus garanti. Créez une nouvelle demande : le montant sera recalculé.</p>
+    <div class="grow"></div>
+    <button class="btn" data-act="start">Créer une nouvelle demande</button>`;
+}
+
+function drawerHtml() {
+  return `<div class="scrim" data-act="close"></div>
+  <aside class="drawer" role="dialog" aria-modal="true" aria-label="Nouvelle demande de paiement" tabindex="-1">
+    <div class="dh"><span class="t">Nouvelle demande</span><button class="roundbtn" style="background:#fff" data-act="close" aria-label="Fermer">${I.close}</button></div>
+    <div class="db">${flowBody()}</div>
+  </aside>`;
+}
+
+/* ============================ VUE DE KOFFI ============================ */
+function koffiHtml() {
+  const st = S.step;
+  const nav = `<div class="knav">${logo()}<span class="who">Koffi, à Paris</span></div>`;
+  if (!L() || ["home", "hist", "a1", "a2", "ready"].includes(st)) return `<div class="shell">${nav}
+    <div class="inbox"><h2 class="q">Messages</h2><p class="empty">Rien de nouveau.<br>Quand ${nm()} vous enverra une demande, elle apparaîtra ici.</p></div></div>`;
+
+  if (st === "shared") return `<div class="shell">${nav}
+    <div class="inbox"><h2 class="q">Messages</h2>
+      <div class="msg"><p class="from">${nm()}</p><p>Salut Koffi, tu peux m'envoyer ${fmt(L().a)} F ? Tu peux payer ici : <strong>${L().url}</strong></p></div>
+      <button class="btn" data-act="open" style="max-width:340px;margin-top:22px">Ouvrir le lien</button></div></div>`;
+
+  const q = L();
+  let hero, pay;
+  if (st === "opened") {
+    hero = `<h1>${nm()} vous demande</h1>
+      <div class="amt"><span class="n">${fmt(q.a)}</span><span class="u">F</span></div>
+      <p class="sub">à recevoir sur le ${mask(q.phone)}</p>
+      <ol class="how"><li>Scannez le QR ou copiez la facture</li><li>Payez avec votre wallet Lightning</li><li>${nm()} reçoit des FCFA en quelques secondes</li></ol>`;
+    pay = `<div class="paybox">
+        <div class="qr">${qrSvg(q.id)}</div>
+        <p class="qrnote">QR d'exemple. L'application affichera la vraie facture.</p>
+        <div class="sats-line"><b>${fmt(q.sats)}</b><span class="badge">sats</span><span class="eur">≈ ${eur(q.t)}</span></div>
+      </div>
+      <p class="timer" id="b-timer"></p>
+      <button class="btn ln" data-act="wallet">${I.bolt("#fff")}Ouvrir mon wallet Lightning</button>
+      <button class="btn ghost" data-act="copy-inv">Copier la facture</button>
+      <details><summary>Voir le détail des frais</summary>
+        <table>
+          <tr><td>${nm()} reçoit</td><td>${fmt(q.a)} F</td></tr>
+          <tr><td>Frais de service</td><td>${fmt(q.s)} F</td></tr>
+          <tr><td>Frais PI-SPI (maximum)</td><td>${fmt(q.p)} F</td></tr>
+          <tr class="t"><td>Total</td><td>${fmt(q.t)} F</td></tr>
+          <tr><td>Taux de démonstration</td><td>${fmt(RATE)} F par bitcoin</td></tr>
+        </table></details>
+      <p class="help">Pas de wallet ? Wallet of Satoshi, Phoenix ou Blink fonctionnent.</p>`;
+  } else if (st === "processing") {
+    hero = `<h1>Paiement reçu.<br>Envoi en cours.</h1><p class="sub">${nm()} va recevoir ${fmt(q.a)} F sur son mobile money.</p>`;
+    pay = `<div class="paybox" style="text-align:left"><ul class="steps">${stepsHtml()}</ul></div>
+      <p class="help">Vous avez payé ${fmt(q.sats)} sats, soit environ ${eur(q.t)}.</p>`;
+  } else if (st === "done") {
+    hero = `<div class="big-check">${I.check}</div><h1>Envoyé !</h1><p class="sub">${nm()} a reçu <strong style="color:#fff">${fmt(q.a)} F</strong> sur son mobile money.</p>`;
+    pay = `<div class="paybox" style="text-align:left"><p style="margin:0">Vous avez payé <strong>${fmt(q.sats)} sats</strong>, soit environ ${eur(q.t)}, frais compris.</p><p class="hint" style="margin-left:0">Référence ${q.ref}</p></div>`;
+  } else if (st === "failed") {
+    hero = `<h1>Votre paiement<br>est bien reçu</h1><p class="sub">L'envoi vers ${nm()} a rencontré un problème. Notre équipe le relance. Vous n'avez rien à repayer.</p>`;
+    pay = `<div class="paybox" style="text-align:left"><p style="margin:0">Payé : <strong>${fmt(q.sats)} sats</strong> (≈ ${eur(q.t)}).</p><p class="hint" style="margin-left:0">Référence ${q.ref}</p></div>`;
+  } else {
+    hero = `<h1>Ce lien a expiré</h1><p class="sub">Le prix en bitcoin n'est plus garanti. Demandez un nouveau lien à ${nm()}.</p>`;
+    pay = `<div class="paybox" style="text-align:left"><p style="margin:0">Aucun paiement n'a été pris.</p></div>`;
+  }
+  return `<div class="shell">${nav}<div class="kgrid"><section class="khero">${hero}</section><section class="kpay">${pay}</section></div></div>`;
+}
+
+/* ============================ RENDU ============================ */
+function renderBridge() {
+  const st = S.step; let s;
+  if (["home", "hist", "a1", "a2"].includes(st)) s = ["active", "", "", "", ""];
+  else if (["ready", "shared", "opened"].includes(st)) s = ["done", "active", "", "", ""];
+  else if (st === "processing") s = S.phase === 0 ? ["done", "done", "active", "", ""] : ["done", "done", "done", "active", ""];
+  else if (st === "done") s = ["done", "done", "done", "done", "done"];
+  else if (st === "failed") s = ["done", "done", "done", "fail", ""];
+  else s = ["done", "fail", "", "", ""];
+  $$("#bridge li").forEach((li, i) => { li.className = s[i]; });
+}
+
+function render() {
+  const keepScroll = window.scrollY;
+  $("#app").innerHTML = S.view === "a" ? afiHtml() : koffiHtml();
+  const wasOpen = !!$(".drawer");
+  $("#layer").innerHTML = S.view === "a" && S.drawer ? drawerHtml() : "";
+  if (S.view === "a" && S.drawer && !wasOpen) $(".drawer")?.focus({ preventScroll: true });
+  renderBridge();
+  $$(".seg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.view === S.view)));
+  $("#jump").value = S.step;
+  $("#demo-slot").innerHTML = S.step === "opened" ? '<button class="demo-btn" data-act="simulate">Démo : faire payer Koffi</button>' : "";
+  if (S.step === "a1" && S.drawer) updateA1();
+  if (S.step === "a2" && S.drawer) updateA2();
+  if (S.step === "opened" && S.view === "b") startTimer();
+  window.scrollTo(0, keepScroll);
+}
+
+function clearTimers() { timers.forEach(clearTimeout); timers = []; clearInterval(tick); tick = null; }
+
+function setView(v, badge) {
+  S.view = v;
+  $("#badge-b").hidden = !(badge && v !== "b");
+}
+function setStep(step) {
+  const prev = S.step;
+  clearTimers();
+  S.step = step;
+  S.drawer = FLOW.includes(step);
+  if (step === "done" && !S.credited && S.link) { S.credited = true; S.history.unshift({ who: "Koffi, à Paris", when: "À l'instant", amt: S.link.a, new: true }); }
+  if (step === "shared" && prev !== "shared") setView("b");
+  if (step === "done" || ["home", "hist", "a1", "a2", "ready"].includes(step)) setView("a");
+  render();
+  if (step === "processing") runProgress();
+}
+function startTimer() {
+  const draw = () => {
+    const left = Math.max(0, Math.round((S.link.expires - Date.now()) / 1000));
+    const el = $("#b-timer");
+    if (el) el.textContent = `Prix garanti encore ${Math.floor(left / 60)} min ${String(left % 60).padStart(2, "0")} s`;
+    if (left === 0) setStep("expired");
+  };
+  S.link.expires = Date.now() + TTL * 1000; draw(); tick = setInterval(draw, 1000);
+}
+function runProgress() {
+  S.phase = 0; render();
+  timers.push(setTimeout(() => { S.phase = 1; render(); }, 1000));
+  timers.push(setTimeout(() => setStep("done"), 2500));
+}
+
+function updateA1() {
+  const n = $("#a-n"); if (!n) return;
+  const a = amountNum();
+  n.textContent = a ? fmt(a) : "0"; n.classList.toggle("empty", !a);
+  $("#a-amt").className = "amt" + (S.amount.length >= 6 ? " s" : S.amount.length === 5 ? " m" : "");
+  const sub = $("#a-sub");
+  if (!a) { sub.className = "sub"; sub.textContent = `Entre ${fmt(MIN)} et ${fmt(MAX)} F.`; }
+  else if (!amountOk()) { sub.className = "sub bad"; sub.textContent = a < MIN ? `Le minimum est de ${fmt(MIN)} F.` : `Le maximum est de ${fmt(MAX)} F.`; }
+  else { sub.className = "sub"; sub.textContent = `Koffi paiera environ ${eur(quote(a).t)}, frais compris.`; }
+  $("#a-next").disabled = !amountOk();
+}
+function updateA2() {
+  const phoneOk = !!normalizePhone(S.phone);
+  $("#f-tick")?.classList.toggle("ok", phoneOk);
+  const hint = $("#f-hint");
+  if (S.phone && !phoneOk && digits(S.phone).length >= 8) { hint.className = "hint bad"; hint.textContent = "Numéro invalide. Exemple : 01 97 12 34 56."; }
+  else { hint.className = "hint"; hint.textContent = "Le prénom sera montré à la personne qui paie."; }
+  $("#a-create").disabled = !(phoneOk && (S.name || "").trim().length > 0);
+}
+
+function toast(msg) {
+  $$(".toast").forEach((t) => t.remove());
+  const t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); t.textContent = msg;
+  document.body.appendChild(t);
+  clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 2200);
+}
+async function copy(text, msg) { try { await navigator.clipboard.writeText(text); toast(msg); } catch (e) { toast("Copie impossible : sélectionnez le texte à la main."); } }
+function addDigits(k) { S.amount = (S.amount + k).replace(/^0+/, "").slice(0, 7); updateA1(); }
+function ensureLink() {
+  if (!S.amount) S.amount = "20000";
+  if (!normalizePhone(S.phone)) S.phone = "0197123456";
+  if (!S.link) makeLink();
+}
+
+document.addEventListener("click", (e) => {
+  const view = e.target.closest("[data-view]");
+  if (view) { setView(view.dataset.view); $("#badge-b").hidden = true; render(); return; }
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const act = b.dataset.act;
+  if (act === "chip") { S.amount = b.dataset.v; updateA1(); }
+  else if (act === "key") addDigits(b.dataset.k);
+  else if (act === "del") { S.amount = S.amount.slice(0, -1); updateA1(); }
+  else if (act === "start") { S.amount = ""; S.link = null; setStep("a1"); }
+  else if (act === "quick") { S.amount = b.dataset.v; S.link = null; setStep("a2"); }
+  else if (act === "reopen") { S.drawer = true; render(); }
+  else if (act === "close") { S.drawer = false; render(); }
+  else if (act === "finish") { Object.assign(S, { amount: "", phone: "", link: null, phase: 0 }); setStep("home"); }
+  else if (act === "home") setStep("home");
+  else if (act === "hist") setStep("hist");
+  else if (act === "notif") toast("Aucune nouvelle notification.");
+  else if (act === "a-next" && amountOk()) setStep("a2");
+  else if (act === "a-back") setStep("a1");
+  else if (act === "a-create") { makeLink(); setStep("ready"); }
+  else if (act === "share") setStep("shared");
+  else if (act === "copy-link") copy("https://" + S.link.url, "Lien copié");
+  else if (act === "open") setStep("opened");
+  else if (act === "wallet") toast("Dans l'application, ceci ouvre votre wallet Lightning.");
+  else if (act === "copy-inv") copy(S.link.invoice, "Facture copiée");
+  else if (act === "simulate") setStep("processing");
+});
+
+document.addEventListener("input", (e) => {
+  if (e.target.id === "f-name") { S.name = e.target.value; updateA2(); }
+  if (e.target.id === "f-phone") { S.phone = e.target.value; updateA2(); }
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && S.drawer) { S.drawer = false; render(); return; }
+  if (S.step !== "a1" || !S.drawer || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (/^[0-9]$/.test(e.key) && !e.target.closest("button, input")) addDigits(e.key);
+  else if (e.key === "Backspace" && !e.target.closest("input")) { S.amount = S.amount.slice(0, -1); updateA1(); }
+  else if (e.key === "Enter" && amountOk() && !e.target.closest("button")) setStep("a2");
+});
+$("#jump").addEventListener("change", (e) => {
+  const to = e.target.value;
+  if (!["home", "hist", "a1", "a2"].includes(to)) ensureLink();
+  if (to === "a2" && !S.amount) S.amount = "20000";
+  if (["opened", "processing", "failed", "expired", "shared"].includes(to)) S.view = "b";
+  setStep(to);
+});
+
+render();
+</script>
+</body>
+</html>

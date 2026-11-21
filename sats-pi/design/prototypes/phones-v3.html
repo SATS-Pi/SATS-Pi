@@ -1,0 +1,739 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SATS-PI : démo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..700,0..100&family=Plus+Jakarta+Sans:wght@400..800&display=swap" rel="stylesheet">
+<style>
+  /* Style : crème, bandeau noir qui se fond en or, titres serif, boutons noirs arrondis.
+     Or = PI-SPI (mesuré sur ses logos). Orange = Bitcoin. Violet = Lightning (convention, non officiel). */
+  :root {
+    --cream: #F5F3E6;  --cream2: #ECE9D6;  --greige: #DDDBCB;
+    --ink: #17130B;    --mid: #7A7566;     --line: rgba(23, 19, 11, .10);
+    --gold: #FBB900;   --gold-soft: #F6D675;  --gold-deep: #B98A10;
+    --ln: #792EE5;     --btc: #F7931A;
+    --ok: #1F7A3A;     --bad: #B3261E;
+    --serif: "Fraunces", Georgia, "Times New Roman", serif;
+    --sans: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--greige); color: var(--ink); font: 400 16px/1.5 var(--sans); }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+  .hero :focus-visible, .dark :focus-visible { outline-color: #fff; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 24px 16px 64px; }
+
+  /* ---------- page ---------- */
+  .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 24px; }
+  .mark { margin: 0; display: flex; align-items: center; gap: 10px; font: 600 28px/1 var(--serif); letter-spacing: -.01em; }
+  .mark .tile { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; background: var(--ink); }
+  .mark svg { width: 17px; height: 17px; }
+  .slogan { margin: 0; color: var(--mid); }
+  .intro { max-width: 60ch; margin: 14px 0 0; font-size: 17px; color: #4a4536; }
+  .demo-note { display: inline-block; margin: 14px 0 0; padding: 7px 14px; border-radius: 999px; background: rgba(255,255,255,.55); border: 1px solid var(--line); font-size: 14px; }
+
+  /* ---------- le pont ---------- */
+  .bridge { display: grid; grid-template-columns: repeat(5, 1fr); margin: 30px 0 0; padding: 0; list-style: none; }
+  .bridge li { position: relative; padding-top: 32px; text-align: center; font-size: 14px; color: var(--mid); --c: var(--ink); --cn: var(--ln); }
+  .bridge li:nth-child(1) { --c: var(--ink); --cn: var(--ln); }
+  .bridge li:nth-child(2) { --c: var(--ln);  --cn: var(--btc); }
+  .bridge li:nth-child(3) { --c: var(--btc); --cn: var(--gold); }
+  .bridge li:nth-child(4) { --c: var(--gold); --cn: var(--ink); }
+  .bridge li:nth-child(5) { --c: var(--ink); }
+  .bridge .dot { position: absolute; top: 0; left: 50%; z-index: 1; width: 22px; height: 22px; margin-left: -11px; border: 3px solid rgba(23,19,11,.18); border-radius: 50%; background: var(--cream); transition: background .4s, border-color .4s; }
+  .bridge li:not(:last-child)::before, .bridge li:not(:last-child)::after { content: ""; position: absolute; top: 9px; left: calc(50% + 13px); width: calc(100% - 26px); height: 4px; border-radius: 2px; }
+  .bridge li:not(:last-child)::before { background: rgba(23,19,11,.14); }
+  .bridge li:not(:last-child)::after { background: linear-gradient(90deg, var(--c), var(--cn)); transform: scaleX(0); transform-origin: left; transition: transform .7s ease; }
+  .bridge li.done:not(:last-child)::after { transform: scaleX(1); }
+  .bridge li.done .dot { background: var(--c); border-color: var(--c); }
+  .bridge li.active .dot { border-color: var(--c); box-shadow: 0 0 0 5px color-mix(in srgb, var(--c) 25%, transparent); }
+  .bridge li.active, .bridge li.done { color: var(--ink); }
+  .bridge li.active { font-weight: 700; }
+  .bridge li.fail .dot { border: 3px dashed var(--bad); }
+  .bridge li.fail { color: var(--bad); font-weight: 700; }
+
+  /* ---------- scène ---------- */
+  .tabs { display: none; }
+  .stage { display: grid; grid-template-columns: repeat(2, minmax(0, 390px)); justify-content: center; gap: 56px; margin-top: 34px; }
+  .cap { margin: 16px 0 0; text-align: center; color: #5b5646; font-size: 15px; }
+  .cap strong { color: var(--ink); }
+  .demo-slot { min-height: 56px; margin-top: 12px; text-align: center; }
+  .demo-btn { padding: 12px 20px; border: 2px dashed #6f6a58; border-radius: 999px; background: transparent; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .demo-btn:hover { background: rgba(255,255,255,.4); }
+
+  /* ---------- téléphone ---------- */
+  .phone { position: relative; height: 810px; overflow: hidden; border-radius: 46px; background: var(--cream);
+           box-shadow: 0 40px 70px -30px rgba(70, 55, 8, .5), 0 0 0 6px rgba(255,255,255,.55); }
+  .screen { height: 100%; overflow-y: auto; display: flex; flex-direction: column; scrollbar-width: none;
+            background: radial-gradient(120% 34% at 50% 0%, rgba(246, 205, 80, .42), transparent 72%), var(--cream); }
+  .screen::-webkit-scrollbar { display: none; }
+  .sb { display: flex; align-items: center; justify-content: space-between; padding: 16px 26px 6px; font-weight: 700; font-size: 14px; }
+  .sb i { display: inline-block; width: 24px; height: 11px; border: 2px solid currentColor; border-radius: 4px; position: relative; }
+  .sb i::after { content: ""; position: absolute; inset: 1px 5px 1px 1px; background: currentColor; border-radius: 1px; }
+  .pad { padding: 8px 20px 24px; display: flex; flex-direction: column; flex: 1; }
+
+  /* bandeau noir qui se fond en or */
+  .hero { color: #fff; padding: 0 20px 104px;
+          background: linear-gradient(180deg, #17130B 0, #17130B calc(100% - 150px), #6e520c calc(100% - 96px), #E7BC3C calc(100% - 34px), var(--cream) 100%); }
+  .hero .sb { padding-left: 6px; padding-right: 6px; }
+  .hero + .body { margin-top: -86px; }
+  .body { position: relative; padding: 0 20px 24px; display: flex; flex-direction: column; flex: 1; }
+
+  .appbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0 14px; }
+  .logo { display: inline-flex; align-items: center; gap: 8px; font: 600 18px/1 var(--serif); }
+  .logo .tile { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 9px; background: var(--ink); }
+  .logo .tile svg { width: 14px; height: 14px; }
+  .hero .logo .tile { background: rgba(255,255,255,.14); }
+  .who { color: var(--mid); font-size: 14px; }
+  .hero .who { color: rgba(255,255,255,.72); }
+  .roundbtn { display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 50%; background: rgba(255,255,255,.7); cursor: pointer; box-shadow: 0 1px 0 rgba(0,0,0,.05); }
+  .hero .roundbtn { background: rgba(255,255,255,.14); }
+  .roundbtn svg { width: 20px; height: 20px; }
+
+  h2.q { margin: 4px 0 6px; font: 500 30px/1.08 var(--serif); letter-spacing: -.015em; font-variation-settings: "SOFT" 40, "opsz" 72; }
+  h3.sec { margin: 22px 0 8px; font: 500 22px/1.1 var(--serif); letter-spacing: -.01em; }
+  .sub { margin: 6px 0 0; color: var(--mid); min-height: 1.5em; }
+  .hero .sub { color: rgba(255,255,255,.84); }
+  .sub.bad { color: var(--bad); font-weight: 600; }
+  .sub strong { color: var(--ink); }
+
+  /* montants en serif, comme le modèle */
+  .amt { display: flex; align-items: baseline; gap: 8px; margin-top: 8px; font-family: var(--serif); font-weight: 500; letter-spacing: -.03em; line-height: 1; font-variation-settings: "SOFT" 30, "opsz" 144; }
+  .amt .n { font-size: 74px; font-variant-numeric: lining-nums tabular-nums; }
+  .amt .n.empty { color: rgba(23,19,11,.2); }
+  .amt .u { font-size: 30px; color: var(--mid); }
+  .amt.m .n { font-size: 60px; } .amt.s .n { font-size: 48px; }
+  .hero .amt .u { color: rgba(255,255,255,.6); }
+
+  .ptabs { display: flex; gap: 8px; margin-top: 18px; }
+  .ptabs button { padding: 10px 18px; border: 0; border-radius: 999px; background: rgba(255,255,255,.14); color: #fff; font-weight: 600; font-size: 15px; cursor: pointer; }
+  .ptabs button.on { background: var(--gold); color: var(--ink); }
+
+  /* boutons */
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 12px; padding: 18px; border: 0; border-radius: 999px; background: var(--ink); color: #fff; font-weight: 700; font-size: 17px; cursor: pointer; box-shadow: 0 10px 20px -12px rgba(23,19,11,.7); }
+  .btn:hover { background: #2b2415; }
+  .btn:disabled { background: rgba(23,19,11,.16); color: rgba(23,19,11,.4); box-shadow: none; cursor: not-allowed; }
+  .btn.ln { background: var(--ln); box-shadow: 0 10px 20px -12px rgba(121,46,229,.8); }
+  .btn.ln:hover { background: #6a22d1; }
+  .btn.ghost { background: rgba(255,255,255,.6); color: var(--ink); border: 1.5px solid var(--line); box-shadow: none; }
+  .btn.ghost:hover { background: rgba(255,255,255,.9); }
+  .btn svg { width: 20px; height: 20px; }
+
+  /* actions rondes */
+  .acts { display: flex; gap: 22px; margin-top: 20px; }
+  .act { display: flex; flex-direction: column; align-items: center; gap: 8px; border: 0; background: none; cursor: pointer; font-weight: 600; font-size: 14px; }
+  .act .c { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: #fff; box-shadow: 0 6px 14px -8px rgba(23,19,11,.4); }
+  .act.main .c { background: var(--ink); color: #fff; }
+  .act svg { width: 24px; height: 24px; }
+  .pillwide { width: 100%; margin-top: 16px; padding: 14px; border: 0; border-radius: 999px; background: rgba(23,19,11,.07); font-weight: 600; cursor: pointer; }
+  .pillwide:hover { background: rgba(23,19,11,.12); }
+
+  /* cartes translucides */
+  .card { margin-top: 14px; padding: 16px 18px; border-radius: 24px; background: rgba(255,255,255,.6); border: 1px solid rgba(255,255,255,.8); box-shadow: 0 14px 30px -22px rgba(70,55,8,.5); }
+  .row { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+  .row + .row { border-top: 1px solid var(--line); }
+  .av { display: grid; place-items: center; flex: none; width: 42px; height: 42px; border-radius: 50%; background: var(--gold); font: 600 18px/1 var(--serif); }
+  .row .t { flex: 1; min-width: 0; } .row .t b { display: block; font-weight: 700; } .row .t span { color: var(--mid); font-size: 13px; }
+  .row .m { font-weight: 800; font-variant-numeric: tabular-nums; }
+
+  /* graphique */
+  .chart { margin-top: 0; }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .chart .days { display: flex; justify-content: space-between; margin-top: 6px; padding: 0 4px; color: var(--mid); font-size: 12px; }
+  .chart .days .on { padding: 3px 9px; border-radius: 8px; background: var(--ink); color: #fff; font-weight: 700; }
+
+  /* formulaire */
+  .fld { margin-top: 16px; }
+  .fld label { display: block; margin-bottom: 6px; font-weight: 700; font-size: 15px; }
+  .fld input { width: 100%; height: 58px; padding: 0 18px; border: 1.5px solid var(--line); border-radius: 20px; background: rgba(255,255,255,.7); color: var(--ink); font: 600 18px/1 var(--sans); }
+  .fld input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 4px rgba(251,185,0,.35); }
+  .pfx { display: flex; align-items: center; gap: 8px; }
+  .pfx .code { flex: none; display: grid; place-items: center; height: 58px; padding: 0 16px; border-radius: 20px; background: rgba(255,255,255,.7); border: 1.5px solid var(--line); font-weight: 700; font-size: 18px; }
+  .pfx .tick { flex: none; width: 28px; height: 28px; border-radius: 50%; background: rgba(23,19,11,.14); display: grid; place-items: center; }
+  .pfx .tick svg { width: 16px; height: 16px; stroke: #fff; }
+  .pfx .tick.ok { background: var(--ok); }
+  .hint { margin: 6px 4px 0; color: var(--mid); font-size: 14px; }
+  .hint.bad { color: var(--bad); font-weight: 600; }
+  .grow { flex: 1; }
+
+  .chips { display: flex; gap: 6px; margin-top: 14px; }
+  .chip { flex: 1; padding: 10px 2px; border: 1.5px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.55); font-weight: 700; font-size: 14px; cursor: pointer; white-space: nowrap; }
+  .chip:hover { background: var(--gold-soft); border-color: transparent; }
+  .pad-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: auto; padding-top: 14px; }
+  .key { height: 54px; border: 0; border-radius: 18px; background: rgba(255,255,255,.7); font: 600 24px/1 var(--serif); cursor: pointer; box-shadow: 0 1px 0 var(--line); }
+  .key:active { background: var(--gold-soft); }
+  .key svg { width: 24px; height: 24px; }
+
+  /* carte dorée (la demande, comme la carte du modèle) */
+  .gcard { position: relative; margin-top: 8px; padding: 18px 20px; aspect-ratio: 1.62; border-radius: 24px; overflow: hidden; color: var(--ink);
+           background: linear-gradient(140deg, #F9E39A 0%, #EDC24A 42%, #B98A10 100%); box-shadow: 0 24px 40px -24px rgba(120,85,5,.8); display: flex; flex-direction: column; }
+  .gcard::after { content: ""; position: absolute; inset: 0; background: radial-gradient(80% 60% at 20% 0%, rgba(255,255,255,.55), transparent 70%); pointer-events: none; }
+  .gcard.sm { aspect-ratio: auto; padding: 14px 18px; }
+  .gc-top { display: flex; justify-content: space-between; align-items: center; }
+  .chipic { width: 38px; height: 28px; border-radius: 7px; background: linear-gradient(135deg, rgba(255,255,255,.55), rgba(120,85,5,.25)); border: 1px solid rgba(90,62,0,.35); }
+  .gc-mark { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--ink); }
+  .gc-mark svg { width: 17px; height: 17px; }
+  .gc-lbl { margin: auto 0 0; font-weight: 600; font-size: 14px; color: rgba(23,19,11,.7); }
+  .gc-amt { margin: 2px 0 0; font: 500 44px/1 var(--serif); letter-spacing: -.03em; font-variation-settings: "SOFT" 30, "opsz" 144; }
+  .gc-amt small { font-size: 22px; margin-left: 4px; }
+  .gc-foot { display: flex; justify-content: space-between; margin-top: 10px; font-size: 13px; font-weight: 600; color: rgba(23,19,11,.75); }
+
+  .big-check { display: grid; place-items: center; width: 76px; height: 76px; margin: 6px 0 14px; border-radius: 50%; background: var(--gold); animation: pop .5s cubic-bezier(.2,.9,.3,1.3); }
+  .big-check svg { width: 40px; height: 40px; stroke: var(--ink); }
+  @keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+  .linkrow { margin-top: 12px; padding: 13px 16px; border: 1.5px dashed rgba(23,19,11,.35); border-radius: 18px; background: rgba(255,255,255,.5); font-weight: 600; font-size: 15px; word-break: break-all; }
+  .waiting { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-weight: 700; }
+  .pulse { flex: none; width: 12px; height: 12px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 2px var(--ink); animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { transform: scale(1.5); opacity: .4; } }
+
+  /* côté Koffi */
+  .msg { align-self: flex-start; max-width: 88%; margin-top: 12px; padding: 13px 16px; border-radius: 22px 22px 22px 6px; background: rgba(255,255,255,.8); box-shadow: 0 10px 24px -18px rgba(70,55,8,.6); animation: pop .45s cubic-bezier(.2,.9,.3,1.2); }
+  .msg .from { margin: 0 0 4px; font-weight: 700; font-size: 14px; color: var(--mid); }
+  .msg p { margin: 0; }
+  .empty { margin: auto 0; text-align: center; color: var(--mid); }
+  .paybox { padding: 16px; border-radius: 26px; background: #fff; text-align: center; box-shadow: 0 24px 40px -26px rgba(23,19,11,.6); }
+  .paybox .qr svg { display: block; width: 156px; height: 156px; margin: 0 auto; }
+  .qrnote { margin: 4px 0 0; color: var(--mid); font-size: 12px; }
+  .sats-line { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: 4px 10px; margin-top: 10px; }
+  .sats-line b { font: 500 36px/1 var(--serif); letter-spacing: -.02em; font-variant-numeric: lining-nums tabular-nums; }
+  .badge { padding: 3px 10px; border-radius: 999px; background: var(--btc); color: var(--ink); font-weight: 800; font-size: 14px; }
+  .eur { color: var(--mid); font-weight: 600; }
+  .timer { margin: 12px 0 0; text-align: center; color: var(--mid); font-size: 14px; font-variant-numeric: tabular-nums; }
+  details { margin-top: 14px; } summary { cursor: pointer; font-weight: 700; }
+  details table { width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 14px; }
+  details td { padding: 4px 0; } details td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+  details tr.t td { padding-top: 7px; border-top: 1px solid var(--line); font-weight: 700; }
+  .help { margin: 12px 0 0; color: var(--mid); font-size: 14px; }
+
+  .steps { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 16px; }
+  .steps li { display: flex; align-items: center; gap: 12px; color: var(--mid); font-size: 17px; }
+  .steps .d { position: relative; flex: none; width: 26px; height: 26px; border: 3px solid rgba(23,19,11,.15); border-radius: 50%; }
+  .steps li.active { color: var(--ink); font-weight: 700; }
+  .steps li.active .d { border-color: var(--ink); border-top-color: transparent; animation: spin 1s linear infinite; }
+  .steps li.done { color: var(--ink); }
+  .steps li.done .d { background: var(--ink); border-color: var(--ink); }
+  .steps li.done .d::after { content: ""; position: absolute; left: 7px; top: 2px; width: 6px; height: 12px; border: solid #fff; border-width: 0 3px 3px 0; transform: rotate(45deg); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .sms { margin: 14px 0 0; padding: 13px 16px; border-radius: 22px 22px 22px 6px; background: var(--ink); color: #fff; animation: pop .45s cubic-bezier(.2,.9,.3,1.2); }
+  .sms-t { margin: 4px 8px 0; color: var(--mid); font-size: 12px; }
+  .toast { position: sticky; bottom: 0; margin: 10px 20px 0; padding: 11px 14px; border-radius: 14px; background: var(--ink); color: #fff; font-size: 14px; text-align: center; }
+
+  /* ---------- revue ---------- */
+  .review { margin-top: 48px; padding-top: 16px; border-top: 1px solid rgba(23,19,11,.15); }
+  .review p { margin: 0 0 10px; color: #5b5646; font-size: 14px; }
+  .review div { display: flex; flex-wrap: wrap; gap: 8px; }
+  .review button { padding: 9px 15px; border: 1.5px solid var(--ink); border-radius: 999px; background: transparent; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .review button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+
+  /* ---------- mobile : la page devient l'application ---------- */
+  @media (max-width: 899px) {
+    .wrap { padding-top: 16px; }
+    .stage { display: block; margin-top: 18px; }
+    .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 18px; padding: 4px; border-radius: 999px; background: rgba(23,19,11,.1); position: sticky; top: 8px; z-index: 5; }
+    .tabs button { padding: 10px; border: 0; border-radius: 999px; background: transparent; font-weight: 700; cursor: pointer; }
+    .tabs button[aria-selected="true"] { background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+    .tabs .dotbadge { display: inline-block; width: 8px; height: 8px; margin-left: 6px; border-radius: 50%; background: var(--btc); }
+    .col { display: none; }
+    .stage[data-tab="a"] .col.a, .stage[data-tab="b"] .col.b { display: block; }
+    .phone { height: auto; margin-top: 12px; border-radius: 32px; box-shadow: 0 24px 40px -26px rgba(70,55,8,.5); }
+    .screen { min-height: 640px; overflow: visible; }
+    .cap { display: none; }
+    .bridge li { font-size: 12px; }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <h1 class="mark"><span class="tile"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6z" fill="#FBB900"/></svg></span>SATS-PI</h1>
+    <p class="slogan">Receive sats from the world, spend FCFA at home.</p>
+  </header>
+  <p class="intro">Afi, à Cotonou, demande de l'argent à Koffi, à Paris. Koffi paie en bitcoin par Lightning, et Afi reçoit des FCFA sur son mobile money. Les deux téléphones sont liés : essayez.</p>
+  <span class="demo-note">Démonstration : paiements et données d'exemple simulés.</span>
+
+  <ol class="bridge" id="bridge" aria-label="Avancement du paiement">
+    <li><span class="dot"></span>Demande</li>
+    <li><span class="dot"></span>Lightning</li>
+    <li><span class="dot"></span>Conversion</li>
+    <li><span class="dot"></span>PI-SPI</li>
+    <li><span class="dot"></span>Reçu</li>
+  </ol>
+
+  <div class="tabs" role="tablist" aria-label="Choisir le téléphone">
+    <button role="tab" data-tab="a" aria-selected="true">Afi, à Cotonou</button>
+    <button role="tab" data-tab="b" aria-selected="false">Koffi, à Paris<span class="dotbadge" id="badge-b" hidden></span></button>
+  </div>
+
+  <div class="stage" id="stage" data-tab="a">
+    <div class="col a">
+      <div class="phone"><div class="screen" id="scr-a" aria-live="polite"></div></div>
+      <p class="cap"><strong>Afi</strong> reçoit des FCFA à Cotonou</p>
+    </div>
+    <div class="col b">
+      <div class="phone"><div class="screen" id="scr-b" aria-live="polite"></div></div>
+      <p class="cap"><strong>Koffi</strong> paie en bitcoin depuis Paris</p>
+      <div class="demo-slot" id="demo-slot"></div>
+    </div>
+  </div>
+
+  <div class="review">
+    <p>Pour la revue : aller directement à une étape.</p>
+    <div id="jump">
+      <button type="button" data-jump="home">Accueil</button>
+      <button type="button" data-jump="a1">Montant</button>
+      <button type="button" data-jump="a2">Numéro</button>
+      <button type="button" data-jump="ready">Demande prête</button>
+      <button type="button" data-jump="shared">Lien reçu</button>
+      <button type="button" data-jump="opened">Paiement</button>
+      <button type="button" data-jump="processing">Envoi</button>
+      <button type="button" data-jump="done">Reçu</button>
+      <button type="button" data-jump="failed">Échec d'envoi</button>
+      <button type="button" data-jump="expired">Expiré</button>
+      <button type="button" data-jump="hist">Historique</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Démo autonome : tout est simulé dans le navigateur.
+   Branchement sur le backend FastAPI du projet :
+   - quote()                -> GET  /api/quote?amount_xof=...
+   - création de la demande -> POST /api/links
+   - suivi du statut        -> GET  /api/links/{id} toutes les 1,5 s
+   - bouton WhatsApp        -> window.open("https://wa.me/?text=" + encodeURIComponent(message))
+   - QR                     -> GET  /api/links/{id}/qr.svg                     */
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const fmt = (n) => new Intl.NumberFormat("fr-FR").format(n);
+const EUR_PEG = 655.957;
+const eur = (xof) => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(xof / EUR_PEG);
+
+const RATE = 60_000_000, SERVICE_PCT = 1.0, PISPI_PCT = 0.8, MIN = 500, MAX = 100_000, TTL = 15 * 60;
+const ceil = (x) => Math.ceil(Math.round(x * 1e6) / 1e6);
+function quote(a) {
+  const s = ceil(a * SERVICE_PCT / 100), p = ceil(a * PISPI_PCT / 100), t = a + s + p;
+  return { a, s, p, t, sats: ceil(t / RATE * 1e8) };
+}
+
+const sv = (d, extra = "") => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra}>${d}</svg>`;
+const I = {
+  bolt: (c = "currentColor") => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6z" fill="${c}"/></svg>`,
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+  back: sv('<path d="m15 5-7 7 7 7"/>'),
+  bell: sv('<path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15zM10 21h4"/>'),
+  plus: sv('<path d="M12 5v14M5 12h14"/>'),
+  list: sv('<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>'),
+  del: sv('<path d="M20 12H8m0 0 5-5m-5 5 5 5M4 5v14"/>'),
+};
+
+const BASE_BALANCE = 187500;
+const S = { step: "home", amount: "", name: "Afi", phone: "", link: null, phase: 0, tab: "a",
+  history: [
+    { who: "Koffi, à Paris", when: "Il y a 2 jours", amt: 20000 },
+    { who: "Mireille, à Lyon", when: "Il y a 5 jours", amt: 10000 },
+    { who: "Koffi, à Paris", when: "Il y a 12 jours", amt: 50000 },
+  ], credited: false };
+let tick = null, timers = [], toastT = null, lastScreen = null;
+
+const digits = (x) => (x || "").replace(/\D/g, "");
+function normalizePhone(raw) {
+  let d = digits(raw);
+  if (d.startsWith("229")) d = d.slice(3);
+  if (d.length === 8) d = "01" + d;
+  return d.length === 10 && d.startsWith("01") ? d : null;
+}
+const mask = (d) => `+229 ${d.slice(0, 2)} ${d.slice(2, 4)} ** ** ${d.slice(-2)}`.replace(/ /g, " ");
+const amountNum = () => +S.amount || 0;
+const amountOk = () => amountNum() >= MIN && amountNum() <= MAX;
+const balance = () => BASE_BALANCE + S.history.filter((h) => h.new).reduce((s, h) => s + h.amt, 0);
+
+function makeLink() {
+  const q = quote(amountNum());
+  const id = Array.from(crypto.getRandomValues(new Uint8Array(4)), (b) => b.toString(16).padStart(2, "0")).join("");
+  S.link = { id, ...q, phone: normalizePhone(S.phone), url: `sats-pi.app/l/${id}`, ref: "MOCK-" + id.toUpperCase(),
+    invoice: `lnbc${q.sats}n1mock${id}${"q".repeat(36)}`, expires: Date.now() + TTL * 1000 };
+  S.credited = false;
+}
+
+function qrSvg(seed) {
+  const N = 29; let h = 2166136261;
+  for (const c of seed) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0;
+  const rnd = () => { h ^= h << 13; h >>>= 0; h ^= h >>> 17; h ^= h << 5; h >>>= 0; return h / 4294967296; };
+  const fin = (x, y) => (x < 8 && y < 8) || (x >= N - 8 && y < 8) || (x < 8 && y >= N - 8);
+  const box = (ox, oy) => `M${ox} ${oy}h7v7h-7zM${ox + 1} ${oy + 1}h5v5h-5zM${ox + 2} ${oy + 2}h3v3h-3z`;
+  let d = box(0, 0) + box(N - 7, 0) + box(0, N - 7);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (!fin(x, y) && rnd() > 0.52) d += `M${x} ${y}h1v1h-1z`;
+  return `<svg viewBox="-2 -2 ${N + 4} ${N + 4}" shape-rendering="crispEdges" role="img" aria-label="QR de la facture Lightning (exemple)"><rect x="-2" y="-2" width="${N + 4}" height="${N + 4}" fill="#fff"/><path d="${d}" fill="#17130B" fill-rule="evenodd"/></svg>`;
+}
+
+/* graphique : courbe lissée + barre dorée sur le pic (données d'exemple) */
+function chartSvg() {
+  const vals = [12, 18, 9, 22, 31, 14, 20], days = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"], pk = 4;
+  const W = 320, H = 120, px = (i) => 12 + i * ((W - 24) / (vals.length - 1)), py = (v) => H - 14 - (v / 34) * (H - 34);
+  const P = vals.map((v, i) => [px(i), py(v)]);
+  let d = `M${P[0][0]} ${P[0][1]}`;
+  for (let i = 0; i < P.length - 1; i++) {
+    const [x0, y0] = P[Math.max(i - 1, 0)], [x1, y1] = P[i], [x2, y2] = P[i + 1], [x3, y3] = P[Math.min(i + 2, P.length - 1)];
+    d += ` C${x1 + (x2 - x0) / 6} ${y1 + (y2 - y0) / 6} ${x2 - (x3 - x1) / 6} ${y2 - (y3 - y1) / 6} ${x2} ${y2}`;
+  }
+  const [kx, ky] = P[pk];
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Montants reçus cette semaine, exemple">
+    <defs><linearGradient id="glow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FBB900"/><stop offset="1" stop-color="#FBB900" stop-opacity="0"/></linearGradient></defs>
+    <rect x="${kx - 12}" y="${ky}" width="24" height="${H - ky - 6}" rx="12" fill="url(#glow)"/>
+    <path d="${d}" fill="none" stroke="#17130B" stroke-width="2.6" stroke-linecap="round"/>
+    <circle cx="${kx}" cy="${ky}" r="6" fill="#fff" stroke="#17130B" stroke-width="2.6"/>
+    <g transform="translate(${kx - 33} ${ky - 34})"><rect width="66" height="24" rx="12" fill="#FBB900"/><text x="33" y="16.5" text-anchor="middle" font-size="12" font-weight="800" fill="#17130B" font-family="Plus Jakarta Sans, sans-serif">31 000 F</text></g>
+  </svg><div class="days">${days.map((x, i) => `<span class="${i === pk ? "on" : ""}">${x}</span>`).join("")}</div></div>`;
+}
+
+/* ============================ ÉCRANS ============================ */
+const sb = () => `<div class="sb" aria-hidden="true"><span>9:41</span><i></i></div>`;
+const logo = () => `<span class="logo"><span class="tile">${I.bolt("#FBB900")}</span>SATS-PI</span>`;
+const topbar = (title, backAct) => `<div class="appbar"><button class="roundbtn" data-act="${backAct}" aria-label="Retour">${I.back}</button><span class="logo" style="font-size:19px">${title}</span><span style="width:40px"></span></div>`;
+const L = () => S.link;
+const nm = () => S.name || "Afi";
+const rows = (list) => list.map((h) => `<div class="row"><span class="av">${h.who[0]}</span><span class="t"><b>${h.who}</b><span>${h.when}</span></span><span class="m">+ ${fmt(h.amt)} F</span></div>`).join("");
+
+function screenA() {
+  const st = S.step;
+  if (st === "home") return `
+    <div class="hero">${sb()}
+      <div class="appbar"><span style="display:flex;align-items:center;gap:12px"><span class="av">${nm()[0]}</span><span class="logo" style="font-size:22px">Bonjour, ${nm()}</span></span>
+        <button class="roundbtn" aria-label="Notifications" data-act="notif">${I.bell}</button></div>
+      <p class="sub" style="margin:10px 0 0">Reçu ce mois-ci</p>
+      <div class="amt"><span class="n" style="font-size:58px">${fmt(balance())}</span><span class="u">F</span></div>
+      <p class="sub">+12 % par rapport au mois dernier</p>
+      <div class="ptabs"><button class="on" aria-current="page">Recevoir</button><button data-act="hist">Historique</button></div>
+    </div>
+    <div class="body">
+      ${chartSvg()}
+      <button class="pillwide" data-act="hist">Voir tout l'historique</button>
+      <div class="acts">
+        <button class="act main" data-act="start"><span class="c">${I.plus}</span>Demander</button>
+        <button class="act" data-act="hist"><span class="c">${I.list}</span>Historique</button>
+      </div>
+      <h3 class="sec">Dernières transactions</h3>
+      <div class="card" style="margin-top:0;padding:4px 18px">${rows(S.history.slice(0, 3))}</div>
+    </div>`;
+
+  if (st === "hist") return `
+    <div class="pad">${sb()}${topbar("Historique", "home")}
+      <h2 class="q">Argent reçu</h2>
+      <div class="card" style="padding:4px 18px">${rows(S.history)}</div>
+      <div class="grow"></div>
+      <button class="btn" data-act="start">Nouvelle demande</button>
+    </div>`;
+
+  if (st === "a1") return `
+    <div class="pad">${sb()}${topbar("Nouvelle demande", "home")}
+      <h2 class="q">Combien voulez-vous recevoir ?</h2>
+      <div class="amt" id="a-amt" aria-live="polite"><span class="n" id="a-n"></span><span class="u">F</span></div>
+      <p class="sub" id="a-sub"></p>
+      <div class="chips" role="group" aria-label="Montants rapides">
+        ${[5000, 10000, 20000, 50000].map((v) => `<button class="chip" data-act="chip" data-v="${v}">${fmt(v)}</button>`).join("")}
+      </div>
+      <div class="pad-keys" role="group" aria-label="Clavier numérique">
+        ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((k) => `<button class="key" data-act="key" data-k="${k}">${k}</button>`).join("")}
+        <button class="key" data-act="key" data-k="000" aria-label="Trois zéros">000</button>
+        <button class="key" data-act="key" data-k="0">0</button>
+        <button class="key" data-act="del" aria-label="Effacer le dernier chiffre">${I.del}</button>
+      </div>
+      <button class="btn" id="a-next" data-act="a-next" disabled>Continuer</button>
+    </div>`;
+
+  if (st === "a2") return `
+    <div class="pad">${sb()}${topbar("Nouvelle demande", "a-back")}
+      <h2 class="q">Qui reçoit l'argent ?</h2>
+      <p class="sub">Vous recevrez <strong>${fmt(amountNum())} F</strong> sur ce numéro, en quelques secondes.</p>
+      <div class="fld"><label for="f-name">Votre prénom</label><input id="f-name" maxlength="20" value="${S.name.replace(/"/g, "&quot;")}" autocomplete="given-name"></div>
+      <div class="fld"><label for="f-phone">Votre numéro mobile money</label>
+        <div class="pfx"><span class="code" aria-hidden="true">+229</span>
+          <input id="f-phone" style="flex:1;min-width:0" inputmode="tel" placeholder="01 97 12 34 56" value="${S.phone}" aria-describedby="f-hint" autocomplete="tel-national">
+          <span class="tick" id="f-tick" aria-hidden="true">${I.check}</span></div>
+        <p class="hint" id="f-hint">Le prénom sera montré à la personne qui paie.</p></div>
+      <div class="grow"></div>
+      <button class="btn" id="a-create" data-act="a-create" disabled>Créer ma demande</button>
+    </div>`;
+
+  const card = (small) => `<div class="gcard ${small ? "sm" : ""}"><div class="gc-top"><span class="chipic"></span><span class="gc-mark">${I.bolt("#FBB900")}</span></div>
+      <p class="gc-lbl">Demande de paiement</p><p class="gc-amt">${fmt(L().a)}<small>F</small></p>
+      <div class="gc-foot"><span>${mask(L().phone)}</span><span>Valable 15 min</span></div></div>`;
+
+  if (st === "ready") return `
+    <div class="pad">${sb()}${topbar("Votre demande", "home")}
+      <h2 class="q">Votre demande est prête</h2>
+      <p class="sub">Envoyez-la à la personne qui vous envoie l'argent. Elle paie avec n'importe quel wallet Lightning.</p>
+      ${card(false)}
+      <div class="linkrow">${L().url}</div>
+      <div class="grow"></div>
+      <button class="btn" data-act="share">Envoyer par WhatsApp</button>
+      <button class="btn ghost" data-act="copy-link">Copier le lien</button>
+    </div>`;
+
+  if (st === "shared" || st === "opened") return `
+    <div class="pad">${sb()}${topbar("Votre demande", "home")}
+      <h2 class="q">En attente du paiement</h2>
+      <div class="waiting"><span class="pulse"></span>${st === "shared" ? "Le lien est parti. Koffi ne l'a pas encore ouvert." : "Koffi a ouvert le lien et prépare son paiement."}</div>
+      ${card(true)}
+      <div class="linkrow">${L().url}</div>
+      <div class="grow"></div>
+      <button class="btn ghost" data-act="copy-link">Copier le lien</button>
+    </div>`;
+
+  if (st === "processing") return `
+    <div class="pad">${sb()}${topbar("Votre demande", "home")}
+      <h2 class="q">Paiement reçu. L'argent arrive.</h2>
+      <div class="card"><ul class="steps">${stepsHtml()}</ul></div>
+      ${card(true)}
+    </div>`;
+
+  if (st === "done") return `
+    <div class="hero" style="text-align:left">${sb()}
+      <div class="appbar">${logo()}<span class="who">${nm()}, à Cotonou</span></div>
+      <div class="big-check">${I.check}</div>
+      <h2 class="q" style="color:#fff">Argent reçu !</h2>
+      <div class="amt"><span class="n">${fmt(L().a)}</span><span class="u">F</span></div>
+      <p class="sub">Disponible sur votre mobile money.</p>
+    </div>
+    <div class="body">
+      <p class="sms" style="margin-top:0">Vous avez reçu <b>${fmt(L().a)} FCFA</b> de SATS-PI. Référence ${L().ref}.</p>
+      <p class="sms-t">Message d'exemple, à l'instant</p>
+      <div class="grow"></div>
+      <button class="btn" data-act="reset">Retour à l'accueil</button>
+    </div>`;
+
+  if (st === "failed") return `
+    <div class="pad">${sb()}${topbar("Votre demande", "home")}
+      <h2 class="q">Paiement reçu, envoi à relancer</h2>
+      <p class="sub">Koffi a bien payé. L'envoi vers votre mobile money a échoué. Notre équipe le relance : vous n'avez rien à refaire, et Koffi n'a rien à repayer.</p>
+      ${card(true)}
+      <div class="grow"></div>
+      <button class="btn ghost" data-act="reset">Retour à l'accueil</button>
+    </div>`;
+
+  return `
+    <div class="pad">${sb()}${topbar("Votre demande", "home")}
+      <h2 class="q">La demande a expiré</h2>
+      <p class="sub">Le prix en bitcoin n'était plus garanti. Créez une nouvelle demande : le montant sera recalculé.</p>
+      <div class="grow"></div>
+      <button class="btn" data-act="start">Créer une nouvelle demande</button>
+    </div>`;
+}
+
+function stepsHtml() {
+  const list = ["Paiement Lightning reçu", "Conversion en FCFA", "Envoi PI-SPI vers le mobile money"];
+  const state = S.step === "done" ? [2, 2, 2] : S.phase === 0 ? [2, 1, 0] : [2, 2, 1];
+  return list.map((t, i) => `<li class="${state[i] === 2 ? "done" : state[i] === 1 ? "active" : ""}"><span class="d"></span>${t}</li>`).join("");
+}
+
+function screenB() {
+  const st = S.step, who = "Koffi, à Paris";
+  const head = `<div class="appbar">${logo()}<span class="who">${who}</span></div>`;
+  if (["home", "hist", "a1", "a2", "ready"].includes(st)) return `
+    <div class="pad">${sb()}${head}<h2 class="q">Messages</h2>
+      <p class="empty">Rien de nouveau.<br>Quand ${nm()} vous enverra une demande, elle apparaîtra ici.</p></div>`;
+
+  if (st === "shared") return `
+    <div class="pad">${sb()}${head}<h2 class="q">Messages</h2>
+      <div class="msg"><p class="from">${nm()}</p><p>Salut Koffi, tu peux m'envoyer ${fmt(L().a)} F ? Tu peux payer ici : <strong>${L().url}</strong></p></div>
+      <div class="grow"></div>
+      <button class="btn" data-act="open">Ouvrir le lien</button></div>`;
+
+  if (st === "opened") {
+    const q = L();
+    return `
+    <div class="hero">${sb()}${head}
+      <p class="sub" style="margin:6px 0 0">${nm()} vous demande</p>
+      <div class="amt"><span class="n">${fmt(q.a)}</span><span class="u">F</span></div>
+      <p class="sub">à recevoir sur le ${mask(q.phone)}</p>
+    </div>
+    <div class="body">
+      <div class="paybox">
+        <div class="qr">${qrSvg(q.id)}</div>
+        <p class="qrnote">QR d'exemple. L'application affichera la vraie facture.</p>
+        <div class="sats-line"><b>${fmt(q.sats)}</b><span class="badge">sats</span><span class="eur">≈ ${eur(q.t)}</span></div>
+      </div>
+      <p class="timer" id="b-timer"></p>
+      <button class="btn ln" data-act="wallet">${I.bolt("#fff")}Ouvrir mon wallet Lightning</button>
+      <button class="btn ghost" data-act="copy-inv">Copier la facture</button>
+      <details><summary>Voir le détail des frais</summary>
+        <table>
+          <tr><td>${nm()} reçoit</td><td>${fmt(q.a)} F</td></tr>
+          <tr><td>Frais de service</td><td>${fmt(q.s)} F</td></tr>
+          <tr><td>Frais PI-SPI (maximum)</td><td>${fmt(q.p)} F</td></tr>
+          <tr class="t"><td>Total</td><td>${fmt(q.t)} F</td></tr>
+          <tr><td>Taux de démonstration</td><td>${fmt(RATE)} F par bitcoin</td></tr>
+        </table></details>
+      <p class="help">Pas de wallet ? Wallet of Satoshi, Phoenix ou Blink fonctionnent.</p>
+    </div>`;
+  }
+
+  if (st === "processing") return `
+    <div class="pad">${sb()}${head}<h2 class="q">Paiement reçu. Envoi en cours.</h2>
+      <div class="card"><ul class="steps">${stepsHtml()}</ul></div>
+      <div class="card"><p style="margin:0">Vous avez payé <strong>${fmt(L().sats)} sats</strong>, soit environ ${eur(L().t)}.</p></div></div>`;
+
+  if (st === "done") return `
+    <div class="hero">${sb()}${head}
+      <div class="big-check">${I.check}</div>
+      <h2 class="q" style="color:#fff">Envoyé !</h2>
+      <p class="sub">${nm()} a reçu <strong style="color:#fff">${fmt(L().a)} F</strong> sur son mobile money.</p>
+    </div>
+    <div class="body"><div class="card" style="margin-top:0"><p style="margin:0">Vous avez payé <strong>${fmt(L().sats)} sats</strong>, soit environ ${eur(L().t)}, frais compris.</p>
+      <p class="hint" style="margin-left:0">Référence ${L().ref}</p></div></div>`;
+
+  if (st === "failed") return `
+    <div class="pad">${sb()}${head}<h2 class="q">Votre paiement est bien reçu</h2>
+      <p class="sub">L'envoi vers ${nm()} a rencontré un problème. Notre équipe le relance. Vous n'avez rien à repayer.</p>
+      <div class="card"><p style="margin:0">Payé : <strong>${fmt(L().sats)} sats</strong> (≈ ${eur(L().t)}).</p><p class="hint" style="margin-left:0">Référence ${L().ref}</p></div></div>`;
+
+  return `
+    <div class="pad">${sb()}${head}<h2 class="q">Ce lien a expiré</h2>
+      <p class="sub">Le prix en bitcoin n'est plus garanti. Demandez un nouveau lien à ${nm()}.</p></div>`;
+}
+
+/* ============================ RENDU ============================ */
+function renderBridge() {
+  const st = S.step; let s;
+  if (["home", "hist", "a1", "a2"].includes(st)) s = ["active", "", "", "", ""];
+  else if (["ready", "shared", "opened"].includes(st)) s = ["done", "active", "", "", ""];
+  else if (st === "processing") s = S.phase === 0 ? ["done", "done", "active", "", ""] : ["done", "done", "done", "active", ""];
+  else if (st === "done") s = ["done", "done", "done", "done", "done"];
+  else if (st === "failed") s = ["done", "done", "done", "fail", ""];
+  else s = ["done", "fail", "", "", ""];
+  $$("#bridge li").forEach((li, i) => { li.className = s[i]; });
+}
+
+function render() {
+  $("#scr-a").innerHTML = screenA();
+  $("#scr-b").innerHTML = screenB();
+  renderBridge();
+  $$("#jump button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.jump === S.step)));
+  $("#demo-slot").innerHTML = S.step === "opened" ? '<button class="demo-btn" data-act="simulate">Démo : faire payer Koffi</button>' : "";
+  if (S.step === "a1") updateA1();
+  if (S.step === "a2") updateA2();
+  if (S.step === "opened") startTimer();
+}
+
+function setStep(step) {
+  const prev = S.step;
+  clearTimers();
+  S.step = step;
+  if (step === "done" && !S.credited && S.link) { S.credited = true; S.history.unshift({ who: "Koffi, à Paris", when: "À l'instant", amt: S.link.a, new: true }); }
+  render();
+  if (step === "shared" && prev !== "shared") setTab("b", true);
+  if (step === "done" || ["home", "hist", "a1", "a2", "ready"].includes(step)) setTab("a");
+  if (step === "processing") runProgress();
+}
+function clearTimers() { timers.forEach(clearTimeout); timers = []; clearInterval(tick); tick = null; }
+function setTab(t, badge) {
+  S.tab = t; $("#stage").dataset.tab = t;
+  $$(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === t)));
+  $("#badge-b").hidden = !(badge && t !== "b");
+}
+function startTimer() {
+  const draw = () => {
+    const left = Math.max(0, Math.round((S.link.expires - Date.now()) / 1000));
+    const el = $("#b-timer");
+    if (el) el.textContent = `Prix garanti encore ${Math.floor(left / 60)} min ${String(left % 60).padStart(2, "0")} s`;
+    if (left === 0) setStep("expired");
+  };
+  S.link.expires = Date.now() + TTL * 1000; draw(); tick = setInterval(draw, 1000);
+}
+function runProgress() {
+  S.phase = 0; render();
+  timers.push(setTimeout(() => { S.phase = 1; $("#scr-a").innerHTML = screenA(); $("#scr-b").innerHTML = screenB(); renderBridge(); }, 1000));
+  timers.push(setTimeout(() => setStep("done"), 2500));
+}
+
+function updateA1() {
+  const n = $("#a-n"); if (!n) return;
+  const a = amountNum();
+  n.textContent = a ? fmt(a) : "0"; n.classList.toggle("empty", !a);
+  $("#a-amt").className = "amt" + (S.amount.length >= 6 ? " s" : S.amount.length === 5 ? " m" : "");
+  const sub = $("#a-sub");
+  if (!a) { sub.className = "sub"; sub.textContent = `Entre ${fmt(MIN)} et ${fmt(MAX)} F.`; }
+  else if (!amountOk()) { sub.className = "sub bad"; sub.textContent = a < MIN ? `Le minimum est de ${fmt(MIN)} F.` : `Le maximum est de ${fmt(MAX)} F.`; }
+  else { sub.className = "sub"; sub.textContent = `Koffi paiera environ ${eur(quote(a).t)}, frais compris.`; }
+  $("#a-next").disabled = !amountOk();
+}
+function updateA2() {
+  const phoneOk = !!normalizePhone(S.phone);
+  $("#f-tick")?.classList.toggle("ok", phoneOk);
+  const hint = $("#f-hint");
+  if (S.phone && !phoneOk && digits(S.phone).length >= 8) { hint.className = "hint bad"; hint.textContent = "Numéro invalide. Exemple : 01 97 12 34 56."; }
+  else { hint.className = "hint"; hint.textContent = "Le prénom sera montré à la personne qui paie."; }
+  $("#a-create").disabled = !(phoneOk && (S.name || "").trim().length > 0);
+}
+
+function toast(msg) {
+  $$(".toast").forEach((t) => t.remove());
+  const t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); t.textContent = msg;
+  (lastScreen && lastScreen.isConnected ? lastScreen : $("#scr-a")).appendChild(t);
+  t.scrollIntoView({ block: "nearest" });
+  clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 2200);
+}
+async function copy(text, msg) { try { await navigator.clipboard.writeText(text); toast(msg); } catch (e) { toast("Copie impossible : sélectionnez le texte à la main."); } }
+
+function addDigits(k) { S.amount = (S.amount + k).replace(/^0+/, "").slice(0, 7); updateA1(); }
+function ensureLink() {
+  if (!S.amount) S.amount = "20000";
+  if (!normalizePhone(S.phone)) S.phone = "0197123456";
+  if (!S.link) makeLink();
+}
+
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const act = b.dataset.act;
+  lastScreen = b.closest(".screen");
+  if (act === "chip") { S.amount = b.dataset.v; updateA1(); }
+  else if (act === "key") addDigits(b.dataset.k);
+  else if (act === "del") { S.amount = S.amount.slice(0, -1); updateA1(); }
+  else if (act === "start") { S.amount = ""; S.link = null; setStep("a1"); }
+  else if (act === "home") setStep("home");
+  else if (act === "hist") setStep("hist");
+  else if (act === "notif") toast("Aucune nouvelle notification.");
+  else if (act === "a-next" && amountOk()) setStep("a2");
+  else if (act === "a-back") setStep("a1");
+  else if (act === "a-create") { makeLink(); setStep("ready"); }
+  else if (act === "share") setStep("shared");
+  else if (act === "copy-link") copy("https://" + S.link.url, "Lien copié");
+  else if (act === "open") setStep("opened");
+  else if (act === "wallet") toast("Dans l'application, ceci ouvre votre wallet Lightning.");
+  else if (act === "copy-inv") copy(S.link.invoice, "Facture copiée");
+  else if (act === "simulate") setStep("processing");
+  else if (act === "reset") { Object.assign(S, { amount: "", phone: "", link: null, phase: 0 }); setStep("home"); }
+});
+
+document.addEventListener("input", (e) => {
+  if (e.target.id === "f-name") { S.name = e.target.value; updateA2(); }
+  if (e.target.id === "f-phone") { S.phone = e.target.value; updateA2(); }
+});
+document.addEventListener("keydown", (e) => {
+  if (S.step !== "a1" || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (/^[0-9]$/.test(e.key) && !e.target.closest("button, input")) addDigits(e.key);
+  else if (e.key === "Backspace" && !e.target.closest("input")) { S.amount = S.amount.slice(0, -1); updateA1(); }
+  else if (e.key === "Enter" && amountOk() && !e.target.closest("button")) setStep("a2");
+});
+$$(".tabs button").forEach((b) => b.addEventListener("click", () => { setTab(b.dataset.tab); $("#badge-b").hidden = true; }));
+$$("#jump button").forEach((b) => b.addEventListener("click", () => {
+  const to = b.dataset.jump;
+  if (!["home", "hist", "a1", "a2"].includes(to)) ensureLink();
+  if (to === "a2" && !S.amount) S.amount = "20000";
+  if (["opened", "processing", "failed", "expired", "shared"].includes(to)) setTab("b");
+  setStep(to);
+}));
+
+render();
+</script>
+</body>
+</html>

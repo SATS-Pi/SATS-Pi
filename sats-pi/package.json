@@ -1,0 +1,2 @@
+{ "name": "sats-pi", "private": true, "workspaces": ["apps/*", "packages/*"],
+  "scripts": { "dev:web": "npm -w apps/web run dev", "build:web": "npm -w apps/web run build" } }

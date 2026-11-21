@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+*.db
+__pycache__/
+.venv/
+apps/mobile/android/app/build/
+apps/desktop/src-tauri/target/
+*.keystore
+*.jks
